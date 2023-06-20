@@ -3,15 +3,15 @@ Copyright (c) 2023 Richard M. Hill. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Author: Richard M. Hill.
 -/
-import Mathlib
--- import Mathlib.Tactic
--- import Mathlib.RingTheory.PowerSeries.Basic
--- import Mathlib.RingTheory.Derivation.Basic
--- import Mathlib.Algebra.Algebra.Basic
+-- import Mathlib   -- designed to be compatible with the whole of mathlib.
+-- import Mathlib.Tactic --not currently needed
+import Mathlib.RingTheory.PowerSeries.Basic
+import Mathlib.RingTheory.Derivation.Basic
+--import Mathlib.Algebra.Algebra.Basic --not currently needed
 
 
 /-!
-# Foos and Bars
+# Definitions
 
 In this file we define operations `D` (differentiation) and `comp` (composition)
 on formal power series in one variable (over an arbitrary commutative semi-ring).
@@ -38,7 +38,6 @@ For a formal power series `f = ∑ cₙ*X^n`
 
 - `PowerSeries.D`      : the derivative `PowerSeries R → PowerSeries R`
 - `PowerSeries.comp`   : the composition operation `PowerSeries R → PowerSeries R → PowerSeries R`.
-
 -/
 
 
@@ -433,17 +432,19 @@ by
     calc
       coeff n ((f * g).comp h) = coeff n ((T (f * g) : pow).comp h) := by
         rw [coeff_comp_cts hh hn, coeff_comp_cts hh hn, trunc_trunc]
-      _ = coeff n ((T (T f * T g : pow) : pow).comp h) := by rw [hT, trunc_trunc_mul_trunc]
-      _ = coeff n ((T f * T g : pow).comp h) := by
-        rw [coeff_comp_cts hh hn, coeff_comp_cts hh hn, trunc_trunc]
-      _ = coeff n ((T f : pow).comp h * (T g : pow).comp h) := by
-        rw [← Polynomial.coe_mul, coe_comp hh, coe_comp hh, coe_comp hh, Polynomial.eval₂_mul]
-      _ = coeff n (T ((T f : pow).comp h) * T ((T g : pow).comp h) : pow) := by
-        rw [coeff_mul_cts _ _ hn hn]
-      _ = coeff n (T (f.comp h) * T (g.comp h) : pow) := by
-        rw [hT, trunc_of_trunc_comp hh, trunc_of_trunc_comp hh]
-      _ = coeff n (f.comp h * g.comp h) := by rw [←(coeff_mul_cts _ _ hn hn)]
-  · rw [comp_eq_zero hh, comp_eq_zero hh, MulZeroClass.zero_mul]
+      _ = coeff n ((T (T f * T g : pow) : pow).comp h) :=
+        by rw [hT, trunc_trunc_mul_trunc]
+      _ = coeff n ((T f * T g : pow).comp h) :=
+        by rw [coeff_comp_cts hh hn, coeff_comp_cts hh hn, trunc_trunc]
+      _ = coeff n ((T f : pow).comp h * (T g : pow).comp h) :=
+        by rw [← Polynomial.coe_mul, coe_comp hh, coe_comp hh, coe_comp hh, Polynomial.eval₂_mul]
+      _ = coeff n (T ((T f : pow).comp h) * T ((T g : pow).comp h) : pow) :=
+        by rw [coeff_mul_cts _ _ hn hn]
+      _ = coeff n (T (f.comp h) * T (g.comp h) : pow) :=
+        by rw [hT, trunc_of_trunc_comp hh, trunc_of_trunc_comp hh]
+      _ = coeff n (f.comp h * g.comp h) :=
+        by rw [←(coeff_mul_cts _ _ hn hn)]
+  · rw [comp_eq_zero hh, comp_eq_zero hh, zero_mul]
 
 
 @[simp]
@@ -467,8 +468,8 @@ theorem comp_zero (f : pow) : f.comp 0 = C R (constantCoeff R f) :=
 by
   ext n
   have : constantCoeff R (0 : pow) = 0 := map_zero _
-  rw [coeff_comp_eq this, Polynomial.eval₂_at_zero, coeff_trunc, coeff_zero_eq_constantCoeff,
-    coeff_C]
+  rw [coeff_comp_eq this, Polynomial.eval₂_at_zero, coeff_trunc,
+    coeff_zero_eq_constantCoeff, coeff_C]
   split_ifs with h₁ h₂
   · rw [h₁, coeff_zero_eq_constantCoeff, constantCoeff_C]
   · cases h₂ (zero_lt_succ n)
@@ -478,22 +479,21 @@ by
 /-NOTE: `instance : has_inv power_series R` is currently only defined
 when `R` is a field.  -/
 @[simp]
-theorem inv_comp {R : Type} [Field R] (f g : PowerSeries R) (hf : constantCoeff R f ≠ 0) :
+theorem inv_comp {R : Type} [Field R]
+  (f g : PowerSeries R) (hf : constantCoeff R f ≠ 0) :
   f⁻¹.comp g = (f.comp g)⁻¹ :=
 by
   by_cases constantCoeff R g = 0
   · symm
-    rw [MvPowerSeries.inv_eq_iff_mul_eq_one, ← mul_comp, PowerSeries.inv_mul_cancel]
-    exact one_comp h
-    exact hf
-    suffices : constantCoeff R (f.comp g) ≠ 0
-    exact this
-    rwa [constantCoeff_comp h]
-  rw [comp]
-  dsimp
-  split_ifs
-  · contradiction
-  · rw [comp, if_neg h, PowerSeries.zero_inv]
+    rw [MvPowerSeries.inv_eq_iff_mul_eq_one, ←mul_comp, PowerSeries.inv_mul_cancel]
+    · exact one_comp h
+    · exact hf
+    · change constantCoeff R (f.comp g) ≠ 0
+      rwa [constantCoeff_comp h]
+  · rw [comp]
+    split_ifs
+    · contradiction
+    · rw [comp, if_neg h, PowerSeries.zero_inv]
 
 
 
@@ -503,12 +503,11 @@ by
   nth_rw 2 [(@Polynomial.eval₂_C_X R _ f).symm]
   rw [←Polynomial.coeToPowerSeries.ringHom_apply,
     Polynomial.eval₂_eq_sum_range, Polynomial.eval₂_eq_sum_range, map_sum]
-  apply Finset.sum_congr
-  · rfl
-  · intro x _
-    rw [map_mul, map_pow, Polynomial.coeToPowerSeries.ringHom_apply,
-      Polynomial.coeToPowerSeries.ringHom_apply,
-      Polynomial.coe_C, Polynomial.coe_X]
+  apply Finset.sum_congr rfl
+  intros
+  rw [map_mul, map_pow, Polynomial.coeToPowerSeries.ringHom_apply,
+    Polynomial.coeToPowerSeries.ringHom_apply,
+    Polynomial.coe_C, Polynomial.coe_X]
 
 
 
@@ -519,7 +518,7 @@ theorem comp_X (f : pow) : f.comp X = f :=
 by
   ext n
   rw [coeff_comp_eq (@constantCoeff_X R _),
-    Polynomial.eval₂_X_eq_coe, ← coeff_cts]
+    Polynomial.eval₂_X_eq_coe, ←coeff_cts]
   exact lt_succ_self n
 
 @[simp]
@@ -528,11 +527,14 @@ by
   ext d
   rw [coeff_trunc]
   rw [coeff_X]
-  split_ifs with h1 h2
-  · rw [h2, Polynomial.coeff_X_one]
-  · rw [Polynomial.coeff_X_of_ne_one h2]
-  · have : d ≠ 1 := by linarith [h1]
-    rw [Polynomial.coeff_X_of_ne_one this]
+  split_ifs with h₁ h₂
+  · rw [h₂, Polynomial.coeff_X_one]
+  · rw [Polynomial.coeff_X_of_ne_one h₂]
+  · rw [Polynomial.coeff_X_of_ne_one]
+    by_contra hd
+    apply h₁
+    rw [hd]
+    exact one_lt_succ_succ n
 
 @[simp]
 theorem X_comp {f : pow} (h : constantCoeff R f = 0) : X.comp f = f :=
@@ -596,12 +598,11 @@ by
   ext n
   cases n with
   | zero => 
-    rw [coeff_zero_eq_constantCoeff]
-    exact h2
+    rw [coeff_zero_eq_constantCoeff, h2]
   | succ n => 
-    have eq : coeff R n (@D R _ f) = coeff R n (@D R _ g) := by rw [h1]
+    have equ : coeff R n (@D R _ f) = coeff R n (@D R _ g) := by rw [h1]
     rwa [coeff_D, coeff_D, ←cast_succ, mul_comm, ←nsmul_eq_mul,
-      mul_comm, ←nsmul_eq_mul, smul_right_inj] at eq
+      mul_comm, ←nsmul_eq_mul, smul_right_inj] at equ
     exact succ_ne_zero n
 
 
@@ -611,9 +612,9 @@ theorem PowerSeries.D_inv {R : Type} [Field R] (f : PowerSeries R) :
 by
   by_cases constantCoeff R f = 0
   · suffices : f⁻¹ = 0
-    rw [this, pow_two, MulZeroClass.zero_mul, neg_zero, MulZeroClass.zero_mul, map_zero]
-    rwa [MvPowerSeries.inv_eq_zero]
-  · refine' Derivation.leibniz_of_mul_eq_one _ (_ : f⁻¹ * f = 1)
+    . rw [this, pow_two, zero_mul, neg_zero, zero_mul, map_zero]
+    · rwa [MvPowerSeries.inv_eq_zero]
+  · apply Derivation.leibniz_of_mul_eq_one
     exact PowerSeries.inv_mul_cancel _ h
 
 

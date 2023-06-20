@@ -152,7 +152,7 @@ by
   · cases succ_ne_zero n h
   · rw [zero_mul, map_zero]
 
-theorem trunc_deriv (f : pow) (n : ℕ) :
+theorem trunc_derivative (f : pow) (n : ℕ) :
   (trunc n f.derivative : pow) = derivative ↑(trunc (n + 1) f) :=
 by
   ext d
@@ -181,7 +181,7 @@ by
   rw [coeff_derivative, map_add, coeff_mul_cts f g h0 h0,
     smul_eq_mul, smul_eq_mul,
     coeff_mul_cts g f.derivative h2 h1,
-    coeff_mul_cts f g.derivative h2 h1, trunc_deriv, trunc_deriv,
+    coeff_mul_cts f g.derivative h2 h1, trunc_derivative, trunc_derivative,
     ← map_add, ← derivative_coe_mul_coe, coeff_derivative]
 
 theorem derivative_one : derivative (1 : pow) = 0 :=
@@ -234,11 +234,9 @@ by
 theorem trunc_D (f : pow) (n : ℕ) :
   trunc n (D f) = @Polynomial.derivative R _ (trunc (n + 1) f) :=
 by
-  apply Polynomial.coe_inj.1
-  rw [←D_coe]
-  have := trunc_deriv f n
-  rw [derivative_coe] at this
-  exact Polynomial.coe_inj.1 this
+  apply Polynomial.coe_inj.mp
+  rw [←D_coe, ←trunc_derivative]
+  rfl
 
 theorem trunc_succ (f : pow) (n : ℕ) :
   trunc n.succ f = trunc n f + @Polynomial.monomial R _ n (coeff n f) :=
@@ -248,8 +246,6 @@ by
 theorem D_coe_comp (f : poly) (g : pow) : D (f.eval₂ (C R) g)
   = (@Polynomial.derivative R _ f).eval₂ (C R) g * D g :=
   Derivation.polynomial_eval₂ pow pow D f g
-
-
 
 /--Composition of power series-/
 noncomputable def comp : pow → pow → pow := λ f g ↦
@@ -268,9 +264,9 @@ by
 
 theorem coeff_comp_eq' (f g : pow) (n : ℕ) :
   coeff n (f.comp g) =
-  if constantCoeff R g = 0
-  then coeff n ((trunc n.succ f).eval₂ (C R) g)
-  else 0 :=
+    if constantCoeff R g = 0
+    then coeff n ((trunc n.succ f).eval₂ (C R) g)
+    else 0 :=
 by
   rw [comp]
   split_ifs with h
@@ -290,7 +286,7 @@ private theorem coeff_pow_eq_zero {g : pow} (hg : constantCoeff R g = 0)
   coeff n (g ^ a) = 0 :=
 by
   apply coeff_of_lt_order
-  rw [← X_dvd_iff] at hg 
+  rw [←X_dvd_iff] at hg 
   have : X ^ a ∣ g ^ a := pow_dvd_pow_of_dvd hg a
   rw [order_eq_multiplicity_X]
   apply lt_of_lt_of_le _ (multiplicity.le_multiplicity_of_pow_dvd this)
@@ -337,8 +333,7 @@ theorem D_C (r : R) : D (C R r : pow) = 0 :=
 
 @[simp]
 theorem D_smul (a : R) (f : pow) : D (a • f) = a • D f :=
-by
-  rw [smul_eq_C_mul, smul_eq_C_mul, D_mul, D_C, mul_zero, add_zero]
+  Derivation.map_smul D a f
 
 /-
 The following are a few more results concering composition of
@@ -361,7 +356,7 @@ theorem constantCoeff_comp {f g : pow} (h : constantCoeff R g = 0) :
   constantCoeff R (f.comp g) = constantCoeff R f :=
 by
   have : (trunc 1 f).natDegree < 1 := natDegree_trunc_lt f 0
-  rw [← coeff_zero_eq_constantCoeff, coeff_comp_eq h,
+  rw [←coeff_zero_eq_constantCoeff, coeff_comp_eq h,
     Polynomial.eval₂_eq_sum_range' (C R) this, Finset.sum_range_one,
     _root_.pow_zero, mul_one, coeff_zero_C, coeff_trunc, if_pos zero_lt_one]
 
@@ -382,31 +377,29 @@ by
   ext m
   rw [coeff_trunc, coeff_trunc]
   split_ifs with h
-  · rw [coeff_mul, coeff_mul, Finset.sum_congr]
-    rfl
+  · rw [coeff_mul, coeff_mul, Finset.sum_congr rfl]
     rintro ⟨a, b⟩ hab
-    have ha := Finset.Nat.antidiagonal.fst_le hab
-    have hb := Finset.Nat.antidiagonal.snd_le hab
-    dsimp at ha hb ⊢
-    have ha : a < n := lt_of_le_of_lt ha h
-    have hb : b < n := lt_of_le_of_lt hb h
-    rw [Polynomial.coeff_coe, Polynomial.coeff_coe, coeff_trunc, coeff_trunc, if_pos ha, if_pos hb]
+    have ha : a < n := lt_of_le_of_lt (Finset.Nat.antidiagonal.fst_le hab) h
+    have hb : b < n := lt_of_le_of_lt (Finset.Nat.antidiagonal.snd_le hab) h
+    rw [Polynomial.coeff_coe, Polynomial.coeff_coe, coeff_trunc, coeff_trunc,
+      if_pos ha, if_pos hb]
   · rfl
-
 
 theorem trunc_coe_eq_self {f : poly} {n : ℕ} (hn : n > f.natDegree) : trunc n (f : pow) = f :=
 by
-  induction hn with
-  | refl => 
-    ext a
-    rw [coeff_trunc]
-    split_ifs with h
-    · exact Polynomial.coeff_coe _ _
-    · rw [Polynomial.coeff_eq_zero_of_natDegree_lt]
-      rwa [not_lt, succ_le_iff] at h 
-  | step hm ih =>
-    · rw [trunc_succ, ih, Polynomial.coeff_coe,
-      Polynomial.coeff_eq_zero_of_natDegree_lt hm, map_zero, add_zero]
+  have this : Polynomial.support f ⊆ Finset.Ico 0 n
+  · calc
+      Polynomial.support f
+        ⊆ Finset.range (f.natDegree + 1)  := Polynomial.supp_subset_range_natDegree_succ
+      _ ⊆ Finset.range n                  := Iff.mpr Finset.range_subset hn
+      _ ⊆ Finset.Ico 0 n                  := by rw [Finset.range_eq_Ico]
+  nth_rw 2 [←Polynomial.sum_monomial_eq f]
+  rw [trunc, Polynomial.sum_eq_of_subset f _ _ _ this, Finset.sum_congr rfl]
+  · intros
+    rw [Polynomial.coeff_coe]
+  · intros
+    exact Polynomial.monomial_zero_right _
+
 
 theorem coe_comp {f : poly} {g : pow} (hg : constantCoeff R g = 0) :
   (f : pow).comp g = f.eval₂ (C R) g :=

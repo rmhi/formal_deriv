@@ -42,7 +42,6 @@ For a formal power series `f = ∑ cₙ*X^n`
 
 
 
-
 set_option profiler true
 /-
 TODO :

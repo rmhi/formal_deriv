@@ -3,10 +3,10 @@ Copyright (c) 2023 Richard M. Hill. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Author: Richard M. Hill.
 -/
--- import Mathlib   -- designed to be compatible with the whole of mathlib.
+import Mathlib   -- designed to be compatible with the whole of mathlib.
 -- import Mathlib.Tactic --not currently needed
-import Mathlib.RingTheory.PowerSeries.Basic
-import Mathlib.RingTheory.Derivation.Basic
+--import Mathlib.RingTheory.PowerSeries.Basic
+--import Mathlib.RingTheory.Derivation.Basic
 --import Mathlib.Algebra.Algebra.Basic --not currently needed
 
 
@@ -105,7 +105,7 @@ namespace PowerSeries
 
 theorem coeff_cts (f : pow) {n m : ℕ} (h : n < m) : coeff n f = coeff n (trunc m f) :=
 by
-  rw [coeff_coe, coeff_trunc, if_pos h]
+  rw [Polynomial.coeff_coe, coeff_trunc, if_pos h]
 
 /-- The `n`-th coefficient of a`f*g` may be calculated 
 from the truncations of `f` and `g`.-/
@@ -135,7 +135,7 @@ theorem derivative_coe (f : poly) :
   (f : pow).derivative_fun = @derivative R _ f :=
 by
   ext
-  rw [coeff_derivative, coeff_coe, coeff_coe, Polynomial.coeff_derivative]
+  rw [coeff_derivative, Polynomial.coeff_coe, Polynomial.coeff_coe, Polynomial.coeff_derivative]
 
 theorem derivative_add (f g : pow) : derivative_fun (f + g) = derivative_fun f + derivative_fun g :=
 by
@@ -154,20 +154,20 @@ theorem trunc_derivative (f : pow) (n : ℕ) :
   (trunc n f.derivative_fun : pow) = derivative_fun ↑(trunc (n + 1) f) :=
 by
   ext d
-  rw [coeff_coe, coeff_trunc]
+  rw [Polynomial.coeff_coe, coeff_trunc]
   split_ifs with h
   · have : d + 1 < n + 1 := succ_lt_succ_iff.2 h
-    rw [coeff_derivative, coeff_derivative, coeff_coe, coeff_trunc, if_pos this]
+    rw [coeff_derivative, coeff_derivative, Polynomial.coeff_coe, coeff_trunc, if_pos this]
   · have : ¬d + 1 < n + 1 := by rwa [succ_lt_succ_iff]
-    rw [coeff_derivative, coeff_coe, coeff_trunc, if_neg this, zero_mul]
+    rw [coeff_derivative, Polynomial.coeff_coe, coeff_trunc, if_neg this, zero_mul]
 
 --A special case of the next theorem, used in its proof.
 private theorem derivative_coe_mul_coe (f g : poly) :
   derivative_fun (f * g : pow) = f * derivative_fun (g : pow) + g * derivative_fun (f : pow) :=
 by
-  rw [←coe_mul, derivative_coe, derivative_mul,
+  rw [←Polynomial.coe_mul, derivative_coe, derivative_mul,
     derivative_coe, derivative_coe, add_comm, mul_comm _ g,
-    ←coe_mul, ←coe_mul, coe_add]
+    ←Polynomial.coe_mul, ←Polynomial.coe_mul, Polynomial.coe_add]
 
 /-- Leibniz rule for formal power series.-/
 theorem derivative_mul (f g : pow) :
@@ -363,7 +363,7 @@ by
 theorem trunc_trunc (f : pow) {n : ℕ} : trunc n ↑(trunc n f) = trunc n f :=
 by
   ext m
-  rw [coeff_trunc, coeff_trunc, coeff_coe]
+  rw [coeff_trunc, coeff_trunc, Polynomial.coeff_coe]
   split_ifs with h
   · rw [coeff_trunc, if_pos h]
   · rfl
@@ -379,7 +379,7 @@ by
     rintro ⟨a, b⟩ hab
     have ha : a < n := lt_of_le_of_lt (Finset.Nat.antidiagonal.fst_le hab) h
     have hb : b < n := lt_of_le_of_lt (Finset.Nat.antidiagonal.snd_le hab) h
-    rw [coeff_coe, coeff_coe, coeff_trunc, coeff_trunc, if_pos ha, if_pos hb]
+    rw [Polynomial.coeff_coe, Polynomial.coeff_coe, coeff_trunc, coeff_trunc, if_pos ha, if_pos hb]
   · rfl
 
 theorem trunc_coe_eq_self {f : poly} {n : ℕ} (hn : n > f.natDegree) : trunc n (f : pow) = f :=
@@ -389,11 +389,11 @@ by
       support f
         ⊆ Finset.range (f.natDegree + 1)  := supp_subset_range_natDegree_succ
       _ ⊆ Finset.range n                  := Iff.mpr Finset.range_subset hn
-      _ ⊆ Finset.Ico 0 n                  := by rw [Finset.range_eq_Ico]
+      _ = Finset.Ico 0 n                  := by rw [Finset.range_eq_Ico]
   nth_rw 2 [←sum_monomial_eq f]
   rw [trunc, sum_eq_of_subset f _ _ _ this, Finset.sum_congr rfl]
   · intros
-    rw [coeff_coe]
+    rw [Polynomial.coeff_coe]
   · intros
     exact monomial_zero_right _
 
@@ -434,7 +434,7 @@ by
       _ = coeff n ((T f * T g : pow).comp h) :=
         by rw [coeff_comp_cts hh hn, coeff_comp_cts hh hn, trunc_trunc]
       _ = coeff n ((T f : pow).comp h * (T g : pow).comp h) :=
-        by rw [←coe_mul, coe_comp hh, coe_comp hh, coe_comp hh, eval₂_mul]
+        by rw [←Polynomial.coe_mul, coe_comp hh, coe_comp hh, coe_comp hh, eval₂_mul]
       _ = coeff n (T ((T f : pow).comp h) * T ((T g : pow).comp h) : pow) :=
         by rw [coeff_mul_cts _ _ hn hn]
       _ = coeff n (T (f.comp h) * T (g.comp h) : pow) :=
@@ -503,7 +503,7 @@ by
   apply Finset.sum_congr rfl
   intros
   rw [map_mul, map_pow, coeToPowerSeries.ringHom_apply,
-    coeToPowerSeries.ringHom_apply, coe_C, coe_X]
+    coeToPowerSeries.ringHom_apply, Polynomial.coe_C, Polynomial.coe_X]
 
 
 

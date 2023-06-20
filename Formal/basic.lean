@@ -50,7 +50,7 @@ split off a "classical" section.
 -/
 
 
-open PowerSeries Nat BigOperators
+open PowerSeries Nat BigOperators Polynomial
 open scoped Classical
 
 section CommutativeSemiring
@@ -59,18 +59,19 @@ variable {R : Type} [CommSemiring R] --[DecidableEq R]
 
 local notation "pow"    => PowerSeries R
 local notation "poly"   => Polynomial R
-local notation "coeff"  => coeff R
+local notation "coeff"  => PowerSeries.coeff R
 
 variable (f : Polynomial R)
 
-/-- If f is a polynomial over `R`
-  and d is a derivation on an `R`-algebra then
+/-- If `f` is a polynomial over `R`
+  and `d` is a derivation on an `R`-algebra `A`,
+  then for all `a : A` we have
 
-    `d(f(g)) = f.derivarive (g) * g(d)`.
+    `d(f(a)) = f.derivative (a) * d a`.
 
   TODO : prove in the following alternative way:
   Show that both sides of the equation are derivations
-  on the polynomial ring. 
+  on the polynomial ring (when regarded as functions of `f`). 
   by `mv_polynomial.derivation_ext` they are equal iff they
   agree in the case f=X. This case is easier as it does
   not involve messing around with finite sums.
@@ -79,20 +80,20 @@ theorem Derivation.polynomial_eval₂ (A : Type) [CommSemiring A] [Algebra R A] 
   [AddCommMonoid M] [Module R M] [Module A M] [IsScalarTower R A M] (d : Derivation R A M)
   (f : poly) (g : A) :
   d (f.eval₂ (algebraMap R A) g)
-  = (Polynomial.eval₂ (algebraMap R A) g (@Polynomial.derivative R _ f)) • d g :=
+  = (eval₂ (algebraMap R A) g (@derivative R _ f)) • d g :=
 by
-  rw [Polynomial.eval₂_eq_sum_range, map_sum, Finset.sum_range_succ', Derivation.leibniz,
+  rw [eval₂_eq_sum_range, map_sum, Finset.sum_range_succ', Derivation.leibniz,
     Derivation.leibniz_pow, Derivation.map_algebraMap, zero_nsmul, smul_zero, smul_zero, zero_add,
     add_zero]
   by_cases f.natDegree = 0
-  · rw [h, Finset.sum_range_zero, Polynomial.derivative_of_natDegree_zero h, Polynomial.eval₂_zero,
+  · rw [h, Finset.sum_range_zero, derivative_of_natDegree_zero h, eval₂_zero,
       zero_smul]
-  · have : (@Polynomial.derivative R _ f).natDegree < f.natDegree := Polynomial.natDegree_derivative_lt h
-    rw [Polynomial.eval₂_eq_sum_range' (algebraMap R A) this, Finset.sum_smul]
+  · have : (@derivative R _ f).natDegree < f.natDegree := natDegree_derivative_lt h
+    rw [eval₂_eq_sum_range' (algebraMap R A) this, Finset.sum_smul]
     apply Finset.sum_congr rfl
     intro n _
     rw [Derivation.leibniz, Derivation.leibniz_pow, Derivation.map_algebraMap, smul_zero, add_zero,
-      add_tsub_cancel_right, Polynomial.coeff_derivative, map_mul, IsScalarTower.algebraMap_smul,
+      add_tsub_cancel_right, coeff_derivative, map_mul, IsScalarTower.algebraMap_smul,
       Algebra.algebraMap_eq_smul_one, Algebra.algebraMap_eq_smul_one, Algebra.smul_mul_assoc,
       Algebra.mul_smul_comm, one_mul, Algebra.smul_mul_assoc, Algebra.smul_mul_assoc, one_mul,
       smul_assoc, smul_assoc, ←cast_succ, ← nsmul_eq_smul_cast]
@@ -104,7 +105,7 @@ namespace PowerSeries
 
 theorem coeff_cts (f : pow) {n m : ℕ} (h : n < m) : coeff n f = coeff n (trunc m f) :=
 by
-  rw [Polynomial.coeff_coe, coeff_trunc, if_pos h]
+  rw [coeff_coe, coeff_trunc, if_pos h]
 
 /-- The `n`-th coefficient of a`f*g` may be calculated 
 from the truncations of `f` and `g`.-/
@@ -122,27 +123,26 @@ by
     · exact lt_of_le_of_lt hy hb
 
 /-- The formal derivative of a power series in one variable.-/
-noncomputable def derivative (f : pow) : pow :=
+noncomputable def derivative_fun (f : pow) : pow :=
   mk λ n ↦ coeff (n + 1) f * (n + 1)
 
 theorem coeff_derivative (f : pow) (n : ℕ) :
-  coeff n f.derivative = coeff (n + 1) f * (n + 1) :=
+  coeff n f.derivative_fun = coeff (n + 1) f * (n + 1) :=
 by
-  rw [derivative, coeff_mk]
+  rw [derivative_fun, coeff_mk]
 
 theorem derivative_coe (f : poly) :
-  (f : pow).derivative = @Polynomial.derivative R _ f :=
+  (f : pow).derivative_fun = @derivative R _ f :=
 by
   ext
-  rw [coeff_derivative, Polynomial.coeff_coe, Polynomial.coeff_coe,
-    Polynomial.coeff_derivative]
+  rw [coeff_derivative, coeff_coe, coeff_coe, Polynomial.coeff_derivative]
 
-theorem derivative_add (f g : pow) : derivative (f + g) = derivative f + derivative g :=
+theorem derivative_add (f g : pow) : derivative_fun (f + g) = derivative_fun f + derivative_fun g :=
 by
   ext
   rw [coeff_derivative, map_add, map_add, coeff_derivative, coeff_derivative, add_mul]
 
-theorem derivative_C (r : R) : derivative (C R r) = 0 :=
+theorem derivative_C (r : R) : derivative_fun (C R r) = 0 :=
 by
   ext n
   rw [coeff_derivative, coeff_C]
@@ -151,51 +151,51 @@ by
   · rw [zero_mul, map_zero]
 
 theorem trunc_derivative (f : pow) (n : ℕ) :
-  (trunc n f.derivative : pow) = derivative ↑(trunc (n + 1) f) :=
+  (trunc n f.derivative_fun : pow) = derivative_fun ↑(trunc (n + 1) f) :=
 by
   ext d
-  rw [Polynomial.coeff_coe, coeff_trunc]
+  rw [coeff_coe, coeff_trunc]
   split_ifs with h
   · have : d + 1 < n + 1 := succ_lt_succ_iff.2 h
-    rw [coeff_derivative, coeff_derivative, Polynomial.coeff_coe, coeff_trunc, if_pos this]
+    rw [coeff_derivative, coeff_derivative, coeff_coe, coeff_trunc, if_pos this]
   · have : ¬d + 1 < n + 1 := by rwa [succ_lt_succ_iff]
-    rw [coeff_derivative, Polynomial.coeff_coe, coeff_trunc, if_neg this, zero_mul]
+    rw [coeff_derivative, coeff_coe, coeff_trunc, if_neg this, zero_mul]
 
 --A special case of the next theorem, used in its proof.
 private theorem derivative_coe_mul_coe (f g : poly) :
-  derivative (f * g : pow) = f * derivative (g : pow) + g * derivative (f : pow) :=
+  derivative_fun (f * g : pow) = f * derivative_fun (g : pow) + g * derivative_fun (f : pow) :=
 by
-  rw [←Polynomial.coe_mul, derivative_coe, Polynomial.derivative_mul,
+  rw [←coe_mul, derivative_coe, derivative_mul,
     derivative_coe, derivative_coe, add_comm, mul_comm _ g,
-    ←Polynomial.coe_mul, ←Polynomial.coe_mul, Polynomial.coe_add]
+    ←coe_mul, ←coe_mul, coe_add]
 
 /-- Leibniz rule for formal power series.-/
-theorem derivative_mul (f g : pow) : derivative (f * g) = f • g.derivative + g • f.derivative :=
+theorem derivative_mul (f g : pow) :
+  derivative_fun (f * g) = f • g.derivative_fun + g • f.derivative_fun :=
 by
   ext n
-  have h0 : n + 1 < n + 1 + 1 := lt_succ_self (n + 1)
-  have h1 : n < n + 1 := lt_succ_self n
-  have h2 : n < n + 1 + 1 := lt_of_lt_of_le h1 (le_of_lt h0)
-  rw [coeff_derivative, map_add, coeff_mul_cts f g h0 h0,
+  have h₀ : n + 1 < n + 1 + 1 := lt_succ_self (n + 1)
+  have h₁ : n < n + 1 := lt_succ_self n
+  have h₂ : n < n + 1 + 1 := lt_of_lt_of_le h₁ (le_of_lt h₀)
+  rw [coeff_derivative, map_add, coeff_mul_cts f g h₀ h₀,
     smul_eq_mul, smul_eq_mul,
-    coeff_mul_cts g f.derivative h2 h1,
-    coeff_mul_cts f g.derivative h2 h1, trunc_derivative, trunc_derivative,
+    coeff_mul_cts g f.derivative_fun h₂ h₁,
+    coeff_mul_cts f g.derivative_fun h₂ h₁, trunc_derivative, trunc_derivative,
     ← map_add, ← derivative_coe_mul_coe, coeff_derivative]
 
-theorem derivative_one : derivative (1 : pow) = 0 :=
+theorem derivative_one : derivative_fun (1 : pow) = 0 :=
 by
   rw [←map_one (C R), derivative_C (1 : R)]
 
-theorem derivative_smul (r : R) (f : pow) : derivative (r • f) = r • derivative f :=
+theorem derivative_smul (r : R) (f : pow) : derivative_fun (r • f) = r • derivative_fun f :=
 by
   rw [smul_eq_C_mul, smul_eq_C_mul, derivative_mul,
     derivative_C, smul_zero, add_zero, smul_eq_mul]
 
-
 /--The formal derivative of a formal power series.-/
 noncomputable def D : Derivation R pow pow
 where
-  toFun             := derivative
+  toFun             := derivative_fun
   map_add'          := derivative_add
   map_smul'         := derivative_smul
   map_one_eq_zero'  := derivative_one
@@ -216,7 +216,7 @@ theorem coeff_D (f : pow) (n : ℕ) : coeff n (D f) = coeff (n + 1) f * (n + 1) 
   coeff_derivative f n
 
 @[simp]
-theorem D_coe (f : poly) : (f : pow).derivative = @Polynomial.derivative R _ f :=
+theorem D_coe (f : poly) : (f : pow).derivative_fun = @derivative R _ f :=
   derivative_coe f
 
 @[simp]
@@ -230,9 +230,9 @@ by
   · rfl
 
 theorem trunc_D (f : pow) (n : ℕ) :
-  trunc n (D f) = @Polynomial.derivative R _ (trunc (n + 1) f) :=
+  trunc n (D f) = @derivative R _ (trunc (n + 1) f) :=
 by
-  apply Polynomial.coe_inj.mp
+  apply coe_inj.mp
   rw [←D_coe, ←trunc_derivative]
   rfl
 
@@ -242,7 +242,7 @@ by
   rw [trunc, Ico_zero_eq_range, Finset.sum_range_succ, trunc, Ico_zero_eq_range]
 
 theorem D_coe_comp (f : poly) (g : pow) : D (f.eval₂ (C R) g)
-  = (@Polynomial.derivative R _ f).eval₂ (C R) g * D g :=
+  = (@derivative R _ f).eval₂ (C R) g * D g :=
   Derivation.polynomial_eval₂ pow pow D f g
 
 /--Composition of power series-/
@@ -303,8 +303,8 @@ by
   | refl =>
     rw [coeff_comp_eq h]
   | step ha ih => 
-    rw [trunc_succ, Polynomial.eval₂_add, map_add, ih,
-      Polynomial.eval₂_monomial, coeff_C_mul,
+    rw [trunc_succ, eval₂_add, map_add, ih,
+      eval₂_monomial, coeff_C_mul,
       coeff_pow_eq_zero h ha, mul_zero, add_zero]
 
 /-- The "chain rule" for formal power series in one variable:
@@ -342,7 +342,7 @@ a.rescale f = f.comp (a*X)
 -/
 theorem natDegree_trunc_lt (f : pow) (n : ℕ) : (trunc (n + 1) f).natDegree < n + 1 :=
 by
-  rw [lt_succ_iff, Polynomial.natDegree_le_iff_coeff_eq_zero]
+  rw [lt_succ_iff, natDegree_le_iff_coeff_eq_zero]
   intro m hm
   rw [coeff_trunc]
   split_ifs with h
@@ -355,7 +355,7 @@ theorem constantCoeff_comp {f g : pow} (h : constantCoeff R g = 0) :
 by
   have : (trunc 1 f).natDegree < 1 := natDegree_trunc_lt f 0
   rw [←coeff_zero_eq_constantCoeff, coeff_comp_eq h,
-    Polynomial.eval₂_eq_sum_range' (C R) this, Finset.sum_range_one,
+    eval₂_eq_sum_range' (C R) this, Finset.sum_range_one,
     _root_.pow_zero, mul_one, coeff_zero_C, coeff_trunc, if_pos zero_lt_one]
 
 
@@ -363,7 +363,7 @@ by
 theorem trunc_trunc (f : pow) {n : ℕ} : trunc n ↑(trunc n f) = trunc n f :=
 by
   ext m
-  rw [coeff_trunc, coeff_trunc, Polynomial.coeff_coe]
+  rw [coeff_trunc, coeff_trunc, coeff_coe]
   split_ifs with h
   · rw [coeff_trunc, if_pos h]
   · rfl
@@ -379,25 +379,23 @@ by
     rintro ⟨a, b⟩ hab
     have ha : a < n := lt_of_le_of_lt (Finset.Nat.antidiagonal.fst_le hab) h
     have hb : b < n := lt_of_le_of_lt (Finset.Nat.antidiagonal.snd_le hab) h
-    rw [Polynomial.coeff_coe, Polynomial.coeff_coe, coeff_trunc, coeff_trunc,
-      if_pos ha, if_pos hb]
+    rw [coeff_coe, coeff_coe, coeff_trunc, coeff_trunc, if_pos ha, if_pos hb]
   · rfl
 
 theorem trunc_coe_eq_self {f : poly} {n : ℕ} (hn : n > f.natDegree) : trunc n (f : pow) = f :=
 by
-  have this : Polynomial.support f ⊆ Finset.Ico 0 n
+  have this : support f ⊆ Finset.Ico 0 n
   · calc
-      Polynomial.support f
-        ⊆ Finset.range (f.natDegree + 1)  := Polynomial.supp_subset_range_natDegree_succ
+      support f
+        ⊆ Finset.range (f.natDegree + 1)  := supp_subset_range_natDegree_succ
       _ ⊆ Finset.range n                  := Iff.mpr Finset.range_subset hn
       _ ⊆ Finset.Ico 0 n                  := by rw [Finset.range_eq_Ico]
-  nth_rw 2 [←Polynomial.sum_monomial_eq f]
-  rw [trunc, Polynomial.sum_eq_of_subset f _ _ _ this, Finset.sum_congr rfl]
+  nth_rw 2 [←sum_monomial_eq f]
+  rw [trunc, sum_eq_of_subset f _ _ _ this, Finset.sum_congr rfl]
   · intros
-    rw [Polynomial.coeff_coe]
+    rw [coeff_coe]
   · intros
-    exact Polynomial.monomial_zero_right _
-
+    exact monomial_zero_right _
 
 theorem coe_comp {f : poly} {g : pow} (hg : constantCoeff R g = 0) :
   (f : pow).comp g = f.eval₂ (C R) g :=
@@ -436,7 +434,7 @@ by
       _ = coeff n ((T f * T g : pow).comp h) :=
         by rw [coeff_comp_cts hh hn, coeff_comp_cts hh hn, trunc_trunc]
       _ = coeff n ((T f : pow).comp h * (T g : pow).comp h) :=
-        by rw [← Polynomial.coe_mul, coe_comp hh, coe_comp hh, coe_comp hh, Polynomial.eval₂_mul]
+        by rw [←coe_mul, coe_comp hh, coe_comp hh, coe_comp hh, eval₂_mul]
       _ = coeff n (T ((T f : pow).comp h) * T ((T g : pow).comp h) : pow) :=
         by rw [coeff_mul_cts _ _ hn hn]
       _ = coeff n (T (f.comp h) * T (g.comp h) : pow) :=
@@ -451,7 +449,7 @@ theorem add_comp (f g h : pow) : (f + g).comp h = f.comp h + g.comp h :=
 by
   by_cases hh : constantCoeff R h = 0
   · ext
-    rw [coeff_comp_eq hh, trunc_add, Polynomial.eval₂_add, map_add, map_add,
+    rw [coeff_comp_eq hh, trunc_add, eval₂_add, map_add, map_add,
       coeff_comp_eq hh, coeff_comp_eq hh]
   · rw [comp_eq_zero hh, comp_eq_zero hh, comp_eq_zero hh, add_zero]
 
@@ -459,7 +457,7 @@ by
 theorem one_comp {f : pow} (hf : constantCoeff R f = 0) : (1 : pow).comp f = 1 :=
 by
   ext
-  rw [coeff_comp_eq hf, succ_eq_add_one, trunc_one, Polynomial.eval₂_one]
+  rw [coeff_comp_eq hf, succ_eq_add_one, trunc_one, eval₂_one]
 
 
 @[simp]
@@ -467,7 +465,7 @@ theorem comp_zero (f : pow) : f.comp 0 = C R (constantCoeff R f) :=
 by
   ext n
   have : constantCoeff R (0 : pow) = 0 := map_zero _
-  rw [coeff_comp_eq this, Polynomial.eval₂_at_zero, coeff_trunc,
+  rw [coeff_comp_eq this, eval₂_at_zero, coeff_trunc,
     coeff_zero_eq_constantCoeff, coeff_C]
   split_ifs with h₁ h₂
   · rw [h₁, coeff_zero_eq_constantCoeff, constantCoeff_C]
@@ -497,16 +495,15 @@ by
 
 
 
-theorem Polynomial.eval₂_X_eq_coe (f : poly) : f.eval₂ (C R) X = ↑f :=
+theorem _root_.Polynomial.eval₂_X_eq_coe (f : poly) : f.eval₂ (C R) X = ↑f :=
 by
-  nth_rw 2 [(@Polynomial.eval₂_C_X R _ f).symm]
-  rw [←Polynomial.coeToPowerSeries.ringHom_apply,
-    Polynomial.eval₂_eq_sum_range, Polynomial.eval₂_eq_sum_range, map_sum]
+  nth_rw 2 [(@eval₂_C_X R _ f).symm]
+  rw [←coeToPowerSeries.ringHom_apply,
+    eval₂_eq_sum_range, eval₂_eq_sum_range, map_sum]
   apply Finset.sum_congr rfl
   intros
-  rw [map_mul, map_pow, Polynomial.coeToPowerSeries.ringHom_apply,
-    Polynomial.coeToPowerSeries.ringHom_apply,
-    Polynomial.coe_C, Polynomial.coe_X]
+  rw [map_mul, map_pow, coeToPowerSeries.ringHom_apply,
+    coeToPowerSeries.ringHom_apply, coe_C, coe_X]
 
 
 
@@ -516,8 +513,7 @@ by
 theorem comp_X (f : pow) : f.comp X = f :=
 by
   ext n
-  rw [coeff_comp_eq (@constantCoeff_X R _),
-    Polynomial.eval₂_X_eq_coe, ←coeff_cts]
+  rw [coeff_comp_eq (@constantCoeff_X R _), eval₂_X_eq_coe, ←coeff_cts]
   exact lt_succ_self n
 
 @[simp]
@@ -527,9 +523,9 @@ by
   rw [coeff_trunc]
   rw [coeff_X]
   split_ifs with h₁ h₂
-  · rw [h₂, Polynomial.coeff_X_one]
-  · rw [Polynomial.coeff_X_of_ne_one h₂]
-  · rw [Polynomial.coeff_X_of_ne_one]
+  · rw [h₂, coeff_X_one]
+  · rw [coeff_X_of_ne_one h₂]
+  · rw [coeff_X_of_ne_one]
     by_contra hd
     apply h₁
     rw [hd]
@@ -539,8 +535,7 @@ by
 theorem X_comp {f : pow} (h : constantCoeff R f = 0) : X.comp f = f :=
 by
   ext n
-  rw [coeff_comp_cts h (lt_add_of_pos_right n (succ_pos 1)),
-    trunc_X, Polynomial.eval₂_X]
+  rw [coeff_comp_cts h (lt_add_of_pos_right n (succ_pos 1)), trunc_X, eval₂_X]
 
 
 
@@ -556,7 +551,7 @@ by
 --   },
 --   ext,
 --   rw [coeff_rescale, coeff_comp_eq this,
---     polynomial.eval₂_eq_sum_range' (C R) (natDegree_trunc_lt f n),
+--     eval₂_eq_sum_range' (C R) (natDegree_trunc_lt f n),
 --     map_sum],
 --   simp_rw [mul_pow, ← mul_assoc],
 --   sorry,

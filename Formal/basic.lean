@@ -406,14 +406,10 @@ theorem coe_comp {f : poly} {g : pow} (hg : constantCoeff R g = 0) :
 by
   ext n
   by_cases n < f.natDegree + 1
-  rw [coeff_comp_cts hg h, trunc_coe_eq_self]
-  exact lt_succ_self _
-  rw [coeff_comp_eq hg, trunc_coe_eq_self]
-  rw [succ_eq_add_one]
-  apply lt_succ_of_le
-  apply le_of_lt
-  apply lt_of_succ_le
-  apply le_of_not_gt h
+  · rw [coeff_comp_cts hg h, trunc_coe_eq_self]
+    exact lt_succ_self _
+  · rw [coeff_comp_eq hg, trunc_coe_eq_self]
+    exact lt_succ_of_le (le_of_lt (lt_of_succ_le (le_of_not_gt h)))
 
 
 theorem trunc_of_trunc_comp {f g : pow} {n : ℕ} (hg : constantCoeff R g = 0) :

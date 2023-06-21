@@ -17,21 +17,24 @@ This is because
 -/
 
 
-open PowerSeries Nat
+open PowerSeries
+open Nat
 
-local notation "pow"    => PowerSeries R
-local notation "coeff"  => coeff R
+#check D
+
+local notation "coeff"  => PowerSeries.coeff R
 local notation "D"      => @D R _
+
 
 namespace my_PowerSeries
 
-def exp             : pow := mk λ n => (n.factorial⁻¹ : R)
-def logOneAdd       : pow := mk λ n => (-(-1) ^ n / n : R)
-def geometricSeries : pow := mk λ n => (-1) ^ n
-def polylog (d : ℕ) : pow := mk λ n => (n:R)⁻¹^d
+def exp             : R⟦X⟧ := mk λ n ↦ n.factorial⁻¹
+def logOneAdd       : R⟦X⟧ := mk λ n ↦ -(-1) ^ n / n
+def geometricSeries : R⟦X⟧ := mk λ n ↦ (-1) ^ n 
+def polylog (d : ℕ) : R⟦X⟧ := mk λ n ↦ (n⁻¹: R)^d
 
 
-theorem geometricSeries_eq : geometricSeries = (1 + X : pow)⁻¹ :=
+theorem geometricSeries_eq : geometricSeries = (1 + X : R⟦X⟧)⁻¹ :=
 by
   rw [PowerSeries.eq_inv_iff_mul_eq_one, mul_add, mul_one]
   · ext n
@@ -66,14 +69,14 @@ theorem constantCoeff_exp : constantCoeff R exp = 1 := by
     inv_one]
 
 @[simp]
-theorem exp_neg {f : pow} : exp.comp (-f) = (exp.comp f)⁻¹ :=
+theorem exp_neg {f : R⟦X⟧} : (exp ∘ (-f) : R⟦X⟧) = (exp ∘ f : R⟦X⟧)⁻¹ :=
 by
   by_cases hf : constantCoeff R f = 0
   · have : constantCoeff R (-f) = 0 := by rw [map_neg, hf, neg_eq_zero]
     rw [PowerSeries.eq_inv_iff_mul_eq_one]
     · apply eq_of_D_eq_of_const_eq
       · rw [D_mul, D_comp, D_comp, D_exp, D_one, map_neg, mul_neg, mul_neg,
-          ←mul_assoc, mul_comm (exp.comp (-f)), mul_assoc, add_neg_self]
+          ←mul_assoc, mul_comm (exp ∘ (-f) : R⟦X⟧), mul_assoc, add_neg_self]
       · rw [map_mul, constantCoeff_comp hf, constantCoeff_comp this,
           constantCoeff_exp, map_one, mul_one]
     · rw [constantCoeff_comp hf, constantCoeff_exp]
@@ -81,15 +84,16 @@ by
   · have : ¬constantCoeff R (-f) = 0 := by rw [map_neg, neg_eq_zero]; exact hf
     rw [comp, if_neg this, comp, if_neg hf, MvPowerSeries.zero_inv]
 
+
 @[simp]
-theorem exp_add (f g : pow) (hf : constantCoeff R f = 0) (hg : constantCoeff R g = 0) :
-  exp.comp (f + g) = exp.comp f * exp.comp g :=
+theorem exp_add (f g : R⟦X⟧) (hf : constantCoeff R f = 0) (hg : constantCoeff R g = 0) :
+  (exp ∘ (f + g) : R⟦X⟧) = (exp ∘ f : R⟦X⟧) * (exp ∘ g : R⟦X⟧) :=
 by
   have eq : constantCoeff R (f + g) = 0 := by rw [map_add, hf, hg, zero_add]
   suffices 1 = exp.comp f * exp.comp g * exp.comp (-(f + g))
     by
     rwa [exp_neg, MvPowerSeries.eq_mul_inv_iff_mul_eq, one_mul] at this 
-    change constantCoeff R (exp.comp (f + g)) ≠ 0
+    change constantCoeff R (exp ∘ (f + g)) ≠ 0
     rw [constantCoeff_comp eq, constantCoeff_exp]
     exact one_ne_zero
   · apply eq_of_D_eq_of_const_eq
@@ -124,14 +128,15 @@ by
     exact one_ne_zero
 
 @[simp]
-theorem const_exp_sub_one : constantCoeff R (exp - 1) = 0 := by
+theorem const_exp_sub_one : constantCoeff R (exp - 1) = 0 :=
+by
   rw [map_sub, constantCoeff_exp, constantCoeff_one, sub_self]
 
 @[simp]
-theorem d_log_comp_exp : D (logOneAdd.comp ((exp : pow) - 1)) = 1 :=
-  by
+theorem d_log_comp_exp : D (logOneAdd ∘ (exp - 1 : R⟦X⟧)) = 1 :=
+by
   rw [D_comp, D_logOneAdd, map_sub, D_one, sub_zero, D_exp]
-  have : (1 + (X : pow)).comp (exp - 1) = exp := by
+  have : (1 + X : R⟦X⟧).comp (exp - 1) = exp := by
     rw [add_comp, X_comp const_exp_sub_one, one_comp const_exp_sub_one, add_sub_cancel'_right]
   nth_rw 2 [← this]
   rw [← mul_comp, PowerSeries.inv_mul_cancel, one_comp const_exp_sub_one]
@@ -139,7 +144,7 @@ theorem d_log_comp_exp : D (logOneAdd.comp ((exp : pow) - 1)) = 1 :=
   exact one_ne_zero
 
 @[simp]
-theorem log_exp : logOneAdd.comp ((exp : pow) - 1) = X :=
+theorem log_exp : (logOneAdd ∘ (exp - 1 : R⟦X⟧) : R⟦X⟧) = X :=
   by
   apply eq_of_D_eq_of_const_eq
   rw [d_log_comp_exp, D_X]
@@ -147,9 +152,9 @@ theorem log_exp : logOneAdd.comp ((exp : pow) - 1) = X :=
   exact const_exp_sub_one
 
 @[simp]
-theorem log_mul (f g : pow) (hf : constantCoeff R f = 0) (hg : constantCoeff R g = 0) :
-    logOneAdd.comp ((1 + f) * (1 + g) - 1) = logOneAdd.comp f + logOneAdd.comp g :=
-  by
+theorem log_mul (f g : R⟦X⟧) (hf : constantCoeff R f = 0) (hg : constantCoeff R g = 0) :
+  (logOneAdd ∘ ((1 + f) * (1 + g) - 1 : R⟦X⟧) : R⟦X⟧) = (logOneAdd ∘ f : R⟦X⟧) + (logOneAdd ∘ g : R⟦X⟧) :=
+by
   have eq : constantCoeff R ((1 + f) * (1 + g) - 1) = 0 := by
     rw [map_sub, map_mul, map_add, map_add, hf, hg, map_one, add_zero, mul_one, sub_self]
   apply eq_of_D_eq_of_const_eq
@@ -170,7 +175,7 @@ theorem log_mul (f g : pow) (hf : constantCoeff R f = 0) (hg : constantCoeff R g
     constantCoeff_logOneAdd, add_zero]
 
 @[simp]
-theorem exp_log : exp.comp logOneAdd = (1 + X : pow) :=
+theorem exp_log : (exp ∘ logOneAdd : R⟦X⟧) = (1 + X : R⟦X⟧) :=
 by
   apply eq_of_D_eq_of_const_eq
   · rw [D_comp, map_add, D_one, zero_add, D_exp]

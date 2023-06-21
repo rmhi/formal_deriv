@@ -50,7 +50,8 @@ by
     exact one_ne_zero
 
 
-theorem D_geometricSeries : D geometricSeries = -(1 + X)⁻¹ ^ 2 := by
+theorem D_geometricSeries : D geometricSeries = -(1 + X)⁻¹ ^ 2 :=
+by
   rw [geometricSeries_eq, D_inv, map_add, D_one, D_X, zero_add,
     mul_one]
 
@@ -64,7 +65,8 @@ by
   exact succ_ne_zero n
 
 @[simp]
-theorem constantCoeff_exp : constantCoeff R exp = 1 := by
+theorem constantCoeff_exp : constantCoeff R exp = 1 :=
+by
   rw [exp, ← coeff_zero_eq_constantCoeff, coeff_mk, factorial_zero, cast_one,
     inv_one]
 
@@ -91,17 +93,17 @@ theorem exp_add (f g : R⟦X⟧) (hf : constantCoeff R f = 0) (hg : constantCoef
 by
   have eq : constantCoeff R (f + g) = 0 := by rw [map_add, hf, hg, zero_add]
   suffices 1 = exp.comp f * exp.comp g * exp.comp (-(f + g))
-    by
+  by
     rwa [exp_neg, MvPowerSeries.eq_mul_inv_iff_mul_eq, one_mul] at this 
     change constantCoeff R (exp ∘ (f + g)) ≠ 0
     rw [constantCoeff_comp eq, constantCoeff_exp]
     exact one_ne_zero
-  · apply eq_of_D_eq_of_const_eq
-    · rw [D_mul, D_mul, D_comp, D_comp, D_comp, D_exp, D_one, map_neg, map_add]
-      ring
-    · rw [map_mul, map_mul, constantCoeff_comp hf, constantCoeff_comp hg, constantCoeff_comp,
-        constantCoeff_exp, map_one, mul_one, mul_one]
-      rw [map_neg, eq, neg_zero]
+  apply eq_of_D_eq_of_const_eq
+  · rw [D_mul, D_mul, D_comp, D_comp, D_comp, D_exp, D_one, map_neg, map_add]
+    ring
+  · rw [map_mul, map_mul, constantCoeff_comp hf, constantCoeff_comp hg, constantCoeff_comp,
+      constantCoeff_exp, map_one, mul_one, mul_one]
+    rw [map_neg, eq, neg_zero]
 
 
 @[simp]
@@ -115,9 +117,11 @@ by
   ext n
   rw [mul_add, mul_one, map_add, coeff_D, logOneAdd, coeff_mk, cast_add,
     cast_one, div_mul_cancel]
-  cases' n with n
-  · rw [coeff_zero_mul_X, coeff_zero_one]; norm_num
-  · have : n + 1 ≠ 0 := succ_ne_zero n
+  cases n with
+  | zero =>
+    rw [coeff_zero_mul_X, coeff_zero_one]; norm_num
+  | succ n =>
+    have : n + 1 ≠ 0 := succ_ne_zero n
     rw [coeff_succ_mul_X, coeff_D, coeff_mk, coeff_one, cast_add, cast_one, div_mul_cancel,
       _root_.pow_succ, neg_one_mul, succ_eq_add_one, neg_add_self, if_neg this]
     rw [←cast_one, ←cast_add, cast_ne_zero]
@@ -136,20 +140,20 @@ by
 theorem d_log_comp_exp : D (logOneAdd ∘ (exp - 1 : R⟦X⟧)) = 1 :=
 by
   rw [D_comp, D_logOneAdd, map_sub, D_one, sub_zero, D_exp]
-  have : (1 + X : R⟦X⟧).comp (exp - 1) = exp := by
-    rw [add_comp, X_comp const_exp_sub_one, one_comp const_exp_sub_one, add_sub_cancel'_right]
-  nth_rw 2 [← this]
-  rw [← mul_comp, PowerSeries.inv_mul_cancel, one_comp const_exp_sub_one]
-  rw [map_add, constantCoeff_one, constantCoeff_X, add_zero]
-  exact one_ne_zero
+  have : (1 + X : R⟦X⟧).comp (exp - 1) = exp
+  · rw [add_comp, X_comp const_exp_sub_one, one_comp const_exp_sub_one, add_sub_cancel'_right]
+  · nth_rw 2 [← this]
+    rw [← mul_comp, PowerSeries.inv_mul_cancel, one_comp const_exp_sub_one]
+    rw [map_add, constantCoeff_one, constantCoeff_X, add_zero]
+    exact one_ne_zero
 
 @[simp]
 theorem log_exp : (logOneAdd ∘ (exp - 1 : R⟦X⟧) : R⟦X⟧) = X :=
-  by
+by
   apply eq_of_D_eq_of_const_eq
-  rw [d_log_comp_exp, D_X]
-  rw [constantCoeff_comp, constantCoeff_X, constantCoeff_logOneAdd]
-  exact const_exp_sub_one
+  · rw [d_log_comp_exp, D_X]
+  · rw [constantCoeff_comp, constantCoeff_X, constantCoeff_logOneAdd]
+    exact const_exp_sub_one
 
 @[simp]
 theorem log_mul (f g : R⟦X⟧) (hf : constantCoeff R f = 0) (hg : constantCoeff R g = 0) :
@@ -171,8 +175,8 @@ by
         PowerSeries.inv_mul_cancel, mul_one]
       · rw [map_add, map_one, hf, add_zero]; exact one_ne_zero
       all_goals rw [map_add, map_one, constantCoeff_X, add_zero]; exact one_ne_zero
-  rw [constantCoeff_comp eq, map_add, constantCoeff_comp hf, constantCoeff_comp hg,
-    constantCoeff_logOneAdd, add_zero]
+  · rw [constantCoeff_comp eq, map_add, constantCoeff_comp hf, constantCoeff_comp hg,
+      constantCoeff_logOneAdd, add_zero]
 
 @[simp]
 theorem exp_log : (exp ∘ logOneAdd : R⟦X⟧) = (1 + X : R⟦X⟧) :=
@@ -212,9 +216,9 @@ by
       rw [map_sub, coeff_succ_mul_X, coeff_one, polylog, coeff_D, coeff_D, coeff_mk,
         coeff_mk, pow_one, pow_one, cast_add, cast_add, cast_one, inv_mul_cancel,
         inv_mul_cancel, sub_self, if_neg (succ_ne_zero n)]
-      · rw [←cast_succ, cast_ne_zero];
+      · rw [←cast_succ, cast_ne_zero]
         exact succ_ne_zero n
-      · rw [←cast_succ, cast_ne_zero];
+      · rw [←cast_succ, cast_ne_zero]
         exact succ_ne_zero n.succ
   · rw [map_sub, map_one, constantCoeff_X, sub_zero]
     exact one_ne_zero

@@ -43,7 +43,7 @@ For a formal power series `f = ∑ cₙ*X^n`
 
 
 
-set_option profiler true
+--set_option profiler true
 /-
 TODO :
 prove that composition of power series is associative.
@@ -79,7 +79,7 @@ theorem Derivation.polynomial_eval₂ (A : Type) [CommSemiring A] [Algebra R A] 
   [AddCommMonoid M] [Module R M] [Module A M] [IsScalarTower R A M] (d : Derivation R A M)
   (f : R[X]) (g : A) :
   d (f.eval₂ (algebraMap R A) g)
-  = (eval₂ (algebraMap R A) g (@derivative R _ f)) • d g :=
+  = (eval₂ (algebraMap R A) g (derivative (R:= R) f)) • d g :=
 by
   rw [eval₂_eq_sum_range, map_sum, Finset.sum_range_succ', Derivation.leibniz,
     Derivation.leibniz_pow, Derivation.map_algebraMap, zero_nsmul, smul_zero, smul_zero, zero_add,
@@ -87,7 +87,7 @@ by
   by_cases f.natDegree = 0
   · rw [h, Finset.sum_range_zero, derivative_of_natDegree_zero h, eval₂_zero,
       zero_smul]
-  · have : (@derivative R _ f).natDegree < f.natDegree := natDegree_derivative_lt h
+  · have : (derivative (R:=R) f).natDegree < f.natDegree := natDegree_derivative_lt h
     rw [eval₂_eq_sum_range' (algebraMap R A) this, Finset.sum_smul]
     apply Finset.sum_congr rfl
     intros
@@ -135,7 +135,7 @@ by
   rw [derivative_fun, coeff_mk]
 
 theorem derivative_coe (f : R[X]) :
-  (f : R⟦X⟧).derivative_fun = @derivative R _ f :=
+  (f : R⟦X⟧).derivative_fun = derivative (R := R) f :=
 by
   ext
   rw [coeff_derivative, Polynomial.coeff_coe, Polynomial.coeff_coe, Polynomial.coeff_derivative]
@@ -204,7 +204,7 @@ where
   map_one_eq_zero'  := derivative_one
   leibniz'          := derivative_mul
 
-local notation "D" => @D R _
+local notation "D" => D (R := R)
 
 @[simp]
 theorem D_mul (f g : R⟦X⟧) : D (f * g) = f * D g + g * D f :=
@@ -219,7 +219,7 @@ theorem coeff_D (f : R⟦X⟧) (n : ℕ) : coeff n (D f) = coeff (n + 1) f * (n 
   coeff_derivative f n
 
 @[simp]
-theorem D_coe (f : R[X]) : (f : R⟦X⟧).derivative_fun = @derivative R _ f :=
+theorem D_coe (f : R[X]) : (f : R⟦X⟧).derivative_fun = derivative (R := R) f :=
   derivative_coe f
 
 @[simp]
@@ -233,19 +233,19 @@ by
   · rfl
 
 theorem trunc_D (f : R⟦X⟧) (n : ℕ) :
-  trunc n (D f) = @derivative R _ (trunc (n + 1) f) :=
+  trunc n (D f) = derivative (R := R) (trunc (n + 1) f) :=
 by
   apply coe_inj.mp
   rw [←D_coe, ←trunc_derivative]
   rfl
 
 theorem trunc_succ (f : R⟦X⟧) (n : ℕ) :
-  trunc n.succ f = trunc n f + @Polynomial.monomial R _ n (coeff n f) :=
+  trunc n.succ f = trunc n f + Polynomial.monomial (R := R) n (coeff n f) :=
 by
   rw [trunc, Ico_zero_eq_range, Finset.sum_range_succ, trunc, Ico_zero_eq_range]
 
 theorem D_coe_comp (f : R[X]) (g : R⟦X⟧) : D (f.eval₂ (C R) g)
-  = (@derivative R _ f).eval₂ (C R) g * D g :=
+  = (derivative (R := R) f).eval₂ (C R) g * D g :=
   Derivation.polynomial_eval₂ R⟦X⟧ R⟦X⟧ D f g
 
 /--Composition of power series-/
@@ -254,7 +254,7 @@ noncomputable def comp : R⟦X⟧ → R⟦X⟧ → R⟦X⟧ := λ f g ↦
   then mk λ n ↦ coeff n ((trunc n.succ f).eval₂ (C R) g)
   else 0
 
-scoped infixr:1000 " ∘ "  => PowerSeries.comp
+scoped infixr:90 " ∘ "  => PowerSeries.comp
 
 theorem comp_eq {f g : R⟦X⟧} (hg : constantCoeff R g = 0) :
     (f ∘ g : R⟦X⟧) = mk λ n ↦ coeff n ((trunc n.succ f).eval₂ (C R) g) :=
@@ -591,7 +591,7 @@ is a `comm_ring`.-/
 theorem PowerSeries.eq_of_D_eq_of_const_eq
   {R : Type} [CommRing R] [NoZeroSMulDivisors ℕ R]
   (f g : PowerSeries R) :
-  @D R _ f = @D R _ g → constantCoeff R f = constantCoeff R g → f = g :=
+  D (R := R) f = D (R := R) g → constantCoeff R f = constantCoeff R g → f = g :=
 by
   intro h1 h2
   ext n
@@ -599,7 +599,7 @@ by
   | zero => 
     rw [coeff_zero_eq_constantCoeff, h2]
   | succ n => 
-    have equ : coeff R n (@D R _ f) = coeff R n (@D R _ g) := by rw [h1]
+    have equ : coeff R n (D (R := R) f) = coeff R n (D (R := R) g) := by rw [h1]
     rwa [coeff_D, coeff_D, ←cast_succ, mul_comm, ←nsmul_eq_mul,
       mul_comm, ←nsmul_eq_mul, smul_right_inj] at equ
     exact succ_ne_zero n
@@ -607,7 +607,7 @@ by
 
 @[simp]
 theorem PowerSeries.D_inv {R : Type} [Field R] (f : PowerSeries R) :
-  @D R _ f⁻¹ = -f⁻¹ ^ 2 * @D R _ f :=
+  D (R := R) f⁻¹ = -f⁻¹ ^ 2 * D (R := R) f :=
 by
   by_cases constantCoeff R f = 0
   · suffices : f⁻¹ = 0

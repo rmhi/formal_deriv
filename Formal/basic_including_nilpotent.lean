@@ -248,24 +248,19 @@ theorem D_coe_comp (f : R[X]) (g : R⟦X⟧) : D (f.eval₂ (C R) g)
   = (derivative (R := R) f).eval₂ (C R) g * D g :=
   Derivation.polynomial_eval₂ D f g
 
-/--Composition of power series-/
-noncomputable def comp : R⟦X⟧ → R⟦X⟧ → R⟦X⟧ := λ f g ↦
-  if constantCoeff R g = 0
-  then mk λ n ↦ coeff n ((trunc n.succ f).eval₂ (C R) g)
-  else 0
+-- /--Composition of power series-/
+-- noncomputable def comp : R⟦X⟧ → R⟦X⟧ → R⟦X⟧ := λ f g ↦
+--   if constantCoeff R g = 0
+--   then mk λ n ↦ coeff n ((trunc n.succ f).eval₂ (C R) g)
+--   else 0
 
-lemma pow_tendsto_zero_of_nilpotent_const {f : R⟦X⟧} (hf : IsNilpotent (constantCoeff R f)) (n : ℕ) :
-  ∃ N, ∀ m, N ≤ m → coeff n (f^m) = 0 :=
-by
-  obtain ⟨b,hb⟩ := hf
-  set g := f^b with g_def
-  have : constantCoeff R (f^b) = 0
+lemma pow_tendsto_zero_of_nilpotent_const' {f : R⟦X⟧} {b : ℕ} (hb : (constantCoeff R f) ^ b = 0)
+    ⦃n m : ℕ⦄ (hm : b * (n + 1) ≤ m) : coeff n (f ^ m) = 0 := by
+  have : constantCoeff R (f ^ b) = 0
   · rwa [map_pow]
   rw [←X_dvd_iff] at this
-  use b * (n + 1)
-  intro m hm
   apply coeff_of_lt_order
-  obtain ⟨k,hk⟩ := Nat.exists_eq_add_of_le hm
+  obtain ⟨k, hk⟩ := Nat.exists_eq_add_of_le hm
   rw [hk, pow_add]
   rw [pow_mul, order_eq_multiplicity_X]
   have : X ^ (n+1) ∣ (f^b) ^ (n+1) * f^k
@@ -275,73 +270,101 @@ by
   apply lt_of_lt_of_le _ this
   rw [PartENat.coe_lt_coe, Nat.lt_succ]
 
+lemma pow_tendsto_zero_of_nilpotent_const {f : R⟦X⟧} (hf : IsNilpotent (constantCoeff R f)) 
+    (n : ℕ) : ∃ N, ∀ m, N ≤ m → coeff n (f^m) = 0 := by
+  obtain ⟨b,hb⟩ := hf
+  use b * (n + 1)
+  apply pow_tendsto_zero_of_nilpotent_const' hb
+
+@[reducible]
+noncomputable def comp_aux (f g : R⟦X⟧) (b : ℕ) : R⟦X⟧ :=
+  mk λ n ↦ coeff n ((trunc b f).eval₂ (C R) g)
+
+lemma comp_aux_spec (f g : R⟦X⟧) {b c : ℕ} (hb : (constantCoeff R g) ^ (b / (n + 1)) = 0)
+    (hc : (constantCoeff R g) ^ (c / (n + 1)) = 0) : 
+    coeff n (comp_aux f g b) = coeff n (comp_aux f g c) := by
+  wlog h : b ≤ c
+  · refine (this f g hc hb ?_).symm
+    exact Nat.le_of_not_le h
+  · simp only [comp_aux]
+    clear hc
+    simp only [coeff_mk]
+    induction h with
+  | refl => rfl
+  | step h IH =>
+    rename_i m
+    change b ≤ m at h
+    simp only [comp_aux]
+    rw [trunc_succ, eval₂_add, map_add, ←IH]
+    convert (add_zero (M := R) _).symm
+    rw [eval₂_monomial, coeff_C_mul]
+    convert mul_zero (M₀ := R) _
+    apply pow_tendsto_zero_of_nilpotent_const' hb
+    refine le_trans ?_ h
+    apply div_mul_le_self
+    done
+
+lemma comp_aux_spec' (f g : R⟦X⟧) {b c : ℕ} (hb : (constantCoeff R g) ^ (b / (n + 1)) = 0)
+    (hc : (constantCoeff R g) ^ (c / (n + 1)) = 0) : 
+    coeff n ((trunc b f).eval₂ (C R) g) = coeff n ((trunc c f).eval₂ (C R) g) := by
+  convert comp_aux_spec f g hb hc using 1 <;>
+  rw [comp_aux, coeff_mk]
+
 /--Composition of power series including the case of Nilpotent constant terms-/
-noncomputable def comp' : R⟦X⟧ → R⟦X⟧ → R⟦X⟧ := λ f g ↦
+noncomputable def comp : R⟦X⟧ → R⟦X⟧ → R⟦X⟧ := λ f g ↦
   if h : IsNilpotent (constantCoeff R g)
-  then mk λ n ↦ 
-    let N := Classical.choose <| pow_tendsto_zero_of_nilpotent_const h n
-    coeff n ((trunc N f).eval₂ (C R) g)
+  then mk fun n ↦ coeff n (comp_aux f g (h.choose * (n + 1)))
   else 0
-
-
 
 scoped infixr:90 " ∘ "  => PowerSeries.comp
 
-theorem comp_eq {f g : R⟦X⟧} (hg : constantCoeff R g = 0) :
-    (f ∘ g : R⟦X⟧) = mk λ n ↦ coeff n ((trunc n.succ f).eval₂ (C R) g) :=
-by
-  rw [comp, if_pos hg]
+theorem comp_eq {f g : R⟦X⟧} (hg : IsNilpotent (constantCoeff R g)) :
+    (f ∘ g : R⟦X⟧) = mk λ n ↦ coeff n ((trunc (hg.choose * (n + 1)) f).eval₂ (C R) g) := by
+  simp_rw [comp, dif_pos hg, comp_aux, coeff_mk]
 
-theorem comp_eq_zero {f g : R⟦X⟧} (hg : constantCoeff R g ≠ 0) : (f ∘ g : R⟦X⟧) = 0 :=
-by
-  rw [comp, if_neg hg]
+theorem comp_eq_zero {f g : R⟦X⟧} (hg : ¬ IsNilpotent (constantCoeff R g)) : (f ∘ g : R⟦X⟧) = 0 := by
+  rw [comp, dif_neg hg]
 
 theorem coeff_comp_eq' (f g : R⟦X⟧) (n : ℕ) :
   coeff n (f ∘ g) =
-    if constantCoeff R g = 0
-    then coeff n ((trunc n.succ f).eval₂ (C R) g)
+    if hg : IsNilpotent (constantCoeff R g)
+    then coeff n ((trunc (hg.choose * (n + 1)) f).eval₂ (C R) g)
     else 0 :=
 by
   rw [comp]
-  split_ifs with h
-  · rw [if_pos h, coeff_mk]
-  · rw [if_neg h, map_zero]
+  split
+  · case inl h => simp_rw [dif_pos h, comp_aux, coeff_mk]
+  · case inr h => rw [dif_neg h, map_zero]
 
-theorem coeff_comp_eq {f g : R⟦X⟧} {n : ℕ} (hg : constantCoeff R g = 0) :
-  coeff n (f ∘ g) = coeff n ((trunc n.succ f).eval₂ (C R) g) :=
-by rw [coeff_comp_eq', if_pos hg]
+theorem coeff_comp_eq {f g : R⟦X⟧} {n : ℕ} (hg : IsNilpotent (constantCoeff R g)) :
+  coeff n (f ∘ g) = coeff n ((trunc (hg.choose * (n + 1)) f).eval₂ (C R) g) :=
+by rw [coeff_comp_eq', dif_pos hg]
 
-theorem coeff_comp_eq_zero {f g : R⟦X⟧} {n : ℕ} (hg : ¬constantCoeff R g = 0) :
+theorem coeff_comp_eq_zero {f g : R⟦X⟧} {n : ℕ} (hg : ¬IsNilpotent (constantCoeff R g)) :
   coeff n (f ∘ g) = 0 :=
-by rw [coeff_comp_eq', if_neg hg]
+by rw [coeff_comp_eq', dif_neg hg]
 
-private theorem coeff_pow_eq_zero {g : R⟦X⟧} (hg : constantCoeff R g = 0)
-  {n a : ℕ} (ha : n < a) :
-  coeff n (g ^ a) = 0 :=
-by
-  apply coeff_of_lt_order
-  rw [←X_dvd_iff] at hg 
-  have : X ^ a ∣ g ^ a := pow_dvd_pow_of_dvd hg a
-  rw [order_eq_multiplicity_X]
-  apply lt_of_lt_of_le _ (multiplicity.le_multiplicity_of_pow_dvd this)
-  rwa [PartENat.coe_lt_coe]
-
+example (x : R) (n m : ℕ) (h : n ≤ m) (h' : x^n = 0) : x^m = 0 := by exact pow_eq_zero_of_le h h'
+-- private theorem coeff_pow_eq_zero {g : R⟦X⟧} {b : ℕ} (hb : (constantCoeff R g) ^ b = 0)
+--   {n a : ℕ} (ha : (b * (n + 1)) ≤ a) :
+--   coeff n (g ^ a) = 0 :=
+-- pow_tendsto_zero_of_nilpotent_const' hb ha
 
 /-- (Technical Lemma)
 The if `n<a` then the `n`-th coefficient of `f ∘ g` may be
 calculated using the `a`-th truncation of `f`.
 -/
-theorem coeff_comp_cts {f g : R⟦X⟧} (h : constantCoeff R g = 0)
-  {n a : ℕ} (ha: n < a) :
+theorem coeff_comp_cts {f g : R⟦X⟧} {b : ℕ} (hb : (constantCoeff R g) ^ b = 0)
+  {n a : ℕ} (ha : (b * (n + 1)) ≤ a) :
   coeff n (f ∘ g) = coeff n ((trunc a f).eval₂ (C R) g) :=
 by
-  induction ha with
-    | refl =>
-    rw [coeff_comp_eq h]
-    | step ha ih => 
-    rw [trunc_succ, eval₂_add, map_add, ih,
-      eval₂_monomial, coeff_C_mul,
-      coeff_pow_eq_zero h ha, mul_zero, add_zero]
+  rw [coeff_comp_eq ⟨b, hb⟩]
+  apply comp_aux_spec'
+  · simp
+    apply Exists.choose_spec (⟨b, hb⟩ : ∃ n, (constantCoeff R g) ^ n = 0)
+  · convert pow_eq_zero_of_le _ hb
+    have goo : 0 < n + 1 := by simp
+    exact Iff.mpr (Nat.le_div_iff_mul_le goo) ha
 
 /-- The "chain rule" for formal power series in one variable:
   `D (f ∘ g) = (D f) ∘ g * D g`.
@@ -351,14 +374,21 @@ is trivially true, with both sides defined to be zero.
 @[simp]
 theorem D_comp (f g : R⟦X⟧) : D (f ∘ g) = ((D f) ∘ g : R⟦X⟧) * D g :=
 by
-  by_cases constantCoeff R g = 0
+  by_cases IsNilpotent (constantCoeff R g)
   · ext n
     rw [coeff_D, coeff_comp_eq h, ←coeff_D, D_coe_comp, coeff_mul,
       coeff_mul, Finset.sum_congr rfl]
     intro ⟨x,y⟩ hxy
     have : x < n + 1 :=
       lt_succ_of_le (Finset.Nat.antidiagonal.fst_le hxy)
-    rw [coeff_comp_cts h this, ← trunc_D]
+    dsimp
+    obtain ⟨b, hb⟩ := h
+    congr 1
+    rw [coeff_comp_cts hb (le_refl _)]
+    apply comp_def_spec
+    have := @trunc_D
+    sorry
+    --rw [coeff_comp_cts hb this, ← trunc_D]
   · rw [comp_eq_zero h, comp_eq_zero h, zero_mul, map_zero]
 
 @[simp]

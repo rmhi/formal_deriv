@@ -239,6 +239,19 @@ by
   rw [←D_coe, ←trunc_derivative]
   rfl
 
+
+theorem trunc_D' (f : R⟦X⟧) (n : ℕ) :
+  trunc (n-1) (D f) = derivative (R := R) (trunc n f) :=
+by
+  cases n with
+  | zero =>
+    simp only [zero_eq, ge_iff_le, tsub_eq_zero_of_le]
+    rfl
+  | succ n =>
+    rw [Nat.succ_sub_one, trunc_D]
+
+
+
 theorem trunc_succ (f : R⟦X⟧) (n : ℕ) :
   trunc n.succ f = trunc n f + Polynomial.monomial (R := R) n (coeff n f) :=
 by
@@ -382,6 +395,8 @@ by
     have : x < n + 1 :=
       lt_succ_of_le (Finset.Nat.antidiagonal.fst_le hxy)
     dsimp
+    have := @trunc_D
+    rw [←trunc_D]
     obtain ⟨b, hb⟩ := h
     congr 1
     rw [coeff_comp_cts hb (le_refl _)]

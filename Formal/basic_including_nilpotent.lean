@@ -254,11 +254,11 @@ noncomputable def comp : R⟦X⟧ → R⟦X⟧ → R⟦X⟧ := λ f g ↦
   then mk λ n ↦ coeff n ((trunc n.succ f).eval₂ (C R) g)
   else 0
 
-lemma pow_tendsto_zero_of_nilpotent_const {f : R⟦X⟧} (hf : IsNilpotent (constantCoeff R f)) (n : ℕ) :
-  ∃ N, ∀ m, N ≤ m → coeff n (f^m) = 0 :=
+lemma pow_tendsto_zero_of_nilpotent_const {f : R⟦X⟧} (hf : IsNilpotent (constantCoeff R f))
+    (n : ℕ) :  ∃ N, ∀ m, N ≤ m → coeff n (f^m) = 0 :=
 by
   obtain ⟨b,hb⟩ := hf
-  set g := f^b with g_def
+  set g := f^b
   have : constantCoeff R (f^b) = 0
   · rwa [map_pow]
   rw [←X_dvd_iff] at this

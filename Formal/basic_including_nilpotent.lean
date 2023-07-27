@@ -388,22 +388,34 @@ is trivially true, with both sides defined to be zero.
 theorem D_comp (f g : R⟦X⟧) : D (f ∘ g) = ((D f) ∘ g : R⟦X⟧) * D g :=
 by
   by_cases IsNilpotent (constantCoeff R g)
-  · ext n
-    rw [coeff_D, coeff_comp_eq h, ←coeff_D, D_coe_comp, coeff_mul,
-      coeff_mul, Finset.sum_congr rfl]
-    intro ⟨x,y⟩ hxy
-    have : x < n + 1 :=
-      lt_succ_of_le (Finset.Nat.antidiagonal.fst_le hxy)
-    dsimp
-    have := @trunc_D
-    rw [←trunc_D]
-    obtain ⟨b, hb⟩ := h
-    congr 1
-    rw [coeff_comp_cts hb (le_refl _)]
-    apply comp_def_spec
-    have := @trunc_D
-    sorry
-    --rw [coeff_comp_cts hb this, ← trunc_D]
+  · by_cases hh : h.choose > 0 
+    · ext n
+      rw [coeff_D, coeff_comp_eq h, ←coeff_D, D_coe_comp, coeff_mul,
+        coeff_mul, Finset.sum_congr rfl]
+      intro ⟨x,y⟩ hxy
+      have : x ≤ n :=
+        Finset.Nat.antidiagonal.fst_le hxy
+      rw [←trunc_D', coeff_comp_cts h.choose_spec]
+      dsimp
+      trans h.choose * (n+1)
+      · apply mul_le_mul (le_rfl)
+        apply succ_le_succ this
+        apply Nat.zero_le
+        apply Nat.zero_le
+      · apply Nat.le_pred_of_lt
+        apply Nat.mul_lt_mul_of_pos_left
+        · apply Nat.lt_succ_self
+        · exact hh
+    · simp only [gt_iff_lt, not_lt, nonpos_iff_eq_zero] at hh 
+      have := h.choose_spec
+      rw [hh, _root_.pow_zero] at this
+      suffices : (C R 1) * D ( f ∘ g ) = (C R 1) * (D f).comp g * D g
+      · have that : C R 1 = 1 := rfl
+        rwa [that, one_mul, one_mul] at this
+      · rw [this, map_zero, zero_mul, zero_mul, zero_mul]
+ 
+
+
   · rw [comp_eq_zero h, comp_eq_zero h, zero_mul, map_zero]
 
 @[simp]

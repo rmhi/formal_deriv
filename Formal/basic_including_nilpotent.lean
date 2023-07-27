@@ -413,9 +413,6 @@ by
       · have that : C R 1 = 1 := rfl
         rwa [that, one_mul, one_mul] at this
       · rw [this, map_zero, zero_mul, zero_mul, zero_mul]
- 
-
-
   · rw [comp_eq_zero h, comp_eq_zero h, zero_mul, map_zero]
 
 @[simp]

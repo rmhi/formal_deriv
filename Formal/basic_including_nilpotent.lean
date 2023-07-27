@@ -491,15 +491,19 @@ by
   · intros
     exact monomial_zero_right _
 
-theorem coe_comp {f : R[X]} {g : R⟦X⟧} (hg : constantCoeff R g = 0) :
+theorem coe_comp {f : R[X]} {g : R⟦X⟧} (hg : IsNilpotent (constantCoeff R g)) :
   ((f:R⟦X⟧) ∘ g : R⟦X⟧) = f.eval₂ (C R) g :=
 by
+  set b := hg.choose with b_def
+  have hb := hg.choose_spec
   ext n
-  by_cases n < f.natDegree + 1
-  · rw [coeff_comp_cts hg h, trunc_coe_eq_self]
-    exact lt_succ_self _
+  by_cases b * (n+1) ≤ f.natDegree + 1
+  · rw [coeff_comp_cts hb h, trunc_coe_eq_self]
+    apply lt_succ_self
   · rw [coeff_comp_eq hg, trunc_coe_eq_self]
-    exact lt_succ_of_le (le_of_lt (lt_of_succ_le (le_of_not_gt h)))
+    rw [←b_def]
+    rw [not_le] at h
+    apply lt_of_succ_lt h
 
 
 theorem trunc_of_trunc_comp {f g : R⟦X⟧} {n : ℕ} (hg : constantCoeff R g = 0) :

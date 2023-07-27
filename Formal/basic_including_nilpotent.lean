@@ -440,14 +440,17 @@ by
     contradiction
   · rfl
 
-theorem constantCoeff_comp {f g : R⟦X⟧} (h : constantCoeff R g = 0) :
+theorem constantCoeff_comp {f g : R⟦X⟧} (h : constantCoeff R g = 0 ) :
   constantCoeff R (f ∘ g) = constantCoeff R f :=
 by
   have : (trunc 1 f).natDegree < 1 := natDegree_trunc_lt f 0
-  rw [←coeff_zero_eq_constantCoeff, coeff_comp_eq h,
-    eval₂_eq_sum_range' (C R) this, Finset.sum_range_one,
+  have h' : (constantCoeff R g)^1 = 0
+  · rwa [pow_one]
+  rw [←coeff_zero_eq_constantCoeff, coeff_comp_cts h',
+    eval₂_eq_sum_range' (C R) this g,
+    Finset.sum_range_one,
     _root_.pow_zero, mul_one, coeff_zero_C, coeff_trunc, if_pos zero_lt_one]
-
+  rfl
 
 @[simp]
 theorem trunc_trunc (f : R⟦X⟧) {n : ℕ} : trunc n ↑(trunc n f) = trunc n f :=

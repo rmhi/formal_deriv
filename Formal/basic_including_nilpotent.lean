@@ -511,34 +511,64 @@ theorem trunc_of_trunc_comp {f g : R⟦X⟧} {n : ℕ} (hg : constantCoeff R g =
 by
   ext m
   rw [coeff_trunc, coeff_trunc]
-  split_ifs with h
-  · rw [coeff_comp_cts hg h, coeff_comp_cts hg h, trunc_trunc]
+  split
+  · have hg' : (constantCoeff R g)^1 = 0
+    · rwa [pow_one]
+    rw [coeff_comp_cts hg', coeff_comp_cts hg', trunc_trunc] <;>
+    · rwa [one_mul, succ_le]
+  · rfl
+
+theorem trunc_of_trunc_comp₂ {f g : R⟦X⟧} {n : ℕ} (hg : (constantCoeff R g)^r = 0) :
+  trunc n ((trunc (r*n) f : R⟦X⟧) ∘ g) = trunc n (f ∘ g) :=
+by
+  ext m
+  rw [coeff_trunc, coeff_trunc]
+  split
+  · rw [coeff_comp_cts hg, coeff_comp_cts hg, trunc_trunc] <;>
+    · apply Nat.mul_le_mul (by rfl)
+      rwa [succ_le]
   · rfl
 
 @[simp]
 theorem mul_comp (f g h : R⟦X⟧) :
   ((f * g) ∘ h : R⟦X⟧) = (f ∘ h : R⟦X⟧) * (g ∘ h : R⟦X⟧) :=
 by
-  by_cases hh : constantCoeff R h = 0
-  · ext n
-    let T : R⟦X⟧ → R[X] := trunc (n + 1)
-    have hT : T = trunc (n + 1) := by rfl
+  by_cases hh : IsNilpotent (constantCoeff R h)
+  · have hh' := hh
+    obtain ⟨r, hr⟩ := hh'
+    wlog hr' : 0 < r
+    · clear this hh
+      rw [not_lt, nonpos_iff_eq_zero] at hr'
+      rw [hr', _root_.pow_zero] at hr
+      calc
+        _ = (C R 1) * ((f*g).comp h)            := by rw [map_one, one_mul]
+        _ = (C R 0) * (f*g).comp h              := by rw [hr]
+        _ = 0                                   := by rw [map_zero, zero_mul]
+        _ = (C R 0) * ((f.comp h) * (g.comp h)) := by rw [map_zero, zero_mul]
+        _ = (C R 1) * ((f.comp h) * (g.comp h)) := by rw [hr]
+        _ = (f.comp h) * (g.comp h)             := by rw [map_one, one_mul]
+    ext n
+    set T : R⟦X⟧ → R[X] := trunc (r* (n + 1)) with hT
+    set T' : R⟦X⟧ → R[X] := trunc (n + 1) with hT'
     have hn : n < n + 1 := lt_succ_self n
+    have hnr : n < r * (n + 1)
+    · rw [←succ_le]
+      apply Nat.le_mul_of_pos_left hr'
     calc
       coeff n ((f * g) ∘ h) = coeff n ((T (f * g) : R⟦X⟧) ∘ h) := by
-        rw [coeff_comp_cts hh hn, coeff_comp_cts hh hn, trunc_trunc]
+        rw [coeff_comp_cts hr (by rfl), coeff_comp_cts hr (by rfl), trunc_trunc]
       _ = coeff n ((T (T f * T g : R⟦X⟧) : R⟦X⟧) ∘ h) :=
         by rw [hT, trunc_trunc_mul_trunc]
       _ = coeff n ((T f * T g : R⟦X⟧) ∘ h) :=
-        by rw [coeff_comp_cts hh hn, coeff_comp_cts hh hn, trunc_trunc]
+        by rw [coeff_comp_cts hr (by rfl), coeff_comp_cts hr (by rfl), trunc_trunc]
       _ = coeff n ((T f : R⟦X⟧).comp h * (T g : R⟦X⟧).comp h) :=
         by rw [←Polynomial.coe_mul, coe_comp hh, coe_comp hh, coe_comp hh, eval₂_mul]
-      _ = coeff n (T ((T f : R⟦X⟧) ∘ h) * T ((T g : R⟦X⟧) ∘ h) : R⟦X⟧) :=
+      _ = coeff n (T' ((T f : R⟦X⟧) ∘ h) * T' ((T g : R⟦X⟧) ∘ h) : R⟦X⟧) :=
         by rw [coeff_mul_cts _ _ hn hn]
-      _ = coeff n (T (f ∘ h) * T (g ∘ h) : R⟦X⟧) :=
-        by rw [hT, trunc_of_trunc_comp hh, trunc_of_trunc_comp hh]
+      _ = coeff n (T' (f ∘ h) * T' (g ∘ h) : R⟦X⟧) :=
+        by rw [hT, hT', trunc_of_trunc_comp₂ hr, trunc_of_trunc_comp₂ hr]
       _ = coeff n (f.comp h * g.comp h) :=
-        by rw [←(coeff_mul_cts _ _ hn hn)]
+        by rw [←(coeff_mul_cts (f ∘ h) (g ∘ h)) hn hn]
   · rw [comp_eq_zero hh, comp_eq_zero hh, zero_mul]
 
 

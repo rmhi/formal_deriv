@@ -3,11 +3,9 @@ Copyright (c) 2023 Richard M. Hill. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Author: Richard M. Hill.
 -/
-import Mathlib   -- designed to be compatible with the whole of mathlib.
---import Mathlib.Tactic --not currently needed
+--import Mathlib   -- designed to be compatible with the whole of mathlib.
 import Mathlib.RingTheory.PowerSeries.Basic
 import Mathlib.RingTheory.Derivation.Basic
---import Mathlib.Algebra.Algebra.Basic --not currently needed
 
 
 /-!
@@ -586,7 +584,6 @@ by
   ext
   rw [coeff_comp_cts hf.choose_spec (le_of_lt (lt_succ_self _)), trunc_one, eval₂_one]
 
-
 @[simp]
 theorem comp_zero (f : R⟦X⟧) : f ∘ 0 = C R (constantCoeff R f) :=
 by
@@ -632,9 +629,6 @@ by
     · contradiction
     · rw [comp_eq_zero h, PowerSeries.zero_inv]
 
-
-
-
 theorem _root_.Polynomial.eval₂_X_eq_coe (f : R[X]) : f.eval₂ (C R) X = ↑f :=
 by
   nth_rw 2 [(@eval₂_C_X R _ f).symm]
@@ -644,10 +638,6 @@ by
   intros
   rw [map_mul, map_pow, coeToPowerSeries.ringHom_apply,
     coeToPowerSeries.ringHom_apply, Polynomial.coe_C, Polynomial.coe_X]
-
-
-
-
 
 @[simp]
 theorem comp_X (f : R⟦X⟧) : f ∘ X = f :=

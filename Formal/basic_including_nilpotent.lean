@@ -3,7 +3,7 @@ Copyright (c) 2023 Richard M. Hill. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Author: Richard M. Hill.
 -/
---import Mathlib   -- designed to be compatible with the whole of mathlib.
+import Mathlib   -- designed to be compatible with the whole of mathlib.
 import Mathlib.RingTheory.PowerSeries.Basic
 import Mathlib.RingTheory.Derivation.Basic
 
@@ -259,12 +259,6 @@ theorem D_coe_comp (f : R[X]) (g : R⟦X⟧) : D (f.eval₂ (C R) g)
   = (derivative (R := R) f).eval₂ (C R) g * D g :=
   Derivation.polynomial_eval₂ D f g
 
--- /--Composition of power series-/
--- noncomputable def comp : R⟦X⟧ → R⟦X⟧ → R⟦X⟧ := λ f g ↦
---   if constantCoeff R g = 0
---   then mk λ n ↦ coeff n ((trunc n.succ f).eval₂ (C R) g)
---   else 0
-
 lemma pow_tendsto_zero_of_nilpotent_const' {f : R⟦X⟧} {b : ℕ} (hb : (constantCoeff R f) ^ b = 0)
     ⦃n m : ℕ⦄ (hm : b * (n + 1) ≤ m) : coeff n (f ^ m) = 0 := by
   have : constantCoeff R (f ^ b) = 0
@@ -321,7 +315,9 @@ lemma comp_aux_spec' (f g : R⟦X⟧) {b c : ℕ} (hb : (constantCoeff R g) ^ (b
   convert comp_aux_spec f g hb hc using 1 <;>
   rw [comp_aux, coeff_mk]
 
-/--Composition of power series including the case of Nilpotent constant terms-/
+/--Composition of power series. If `g` has nilpotent constant term then `f.comp g`
+is defined in the usual way. If the constant term of `g` is not nilpotent then `f.comp g`
+is defined to be `0`.-/
 noncomputable def comp : R⟦X⟧ → R⟦X⟧ → R⟦X⟧ := λ f g ↦
   if h : IsNilpotent (constantCoeff R g)
   then mk fun n ↦ coeff n (comp_aux f g (h.choose * (n + 1)))
@@ -355,18 +351,18 @@ theorem coeff_comp_eq_zero {f g : R⟦X⟧} {n : ℕ} (hg : ¬IsNilpotent (const
   coeff n (f ∘ g) = 0 :=
 by rw [coeff_comp_eq', dif_neg hg]
 
-example (x : R) (n m : ℕ) (h : n ≤ m) (h' : x^n = 0) : x^m = 0 := by exact pow_eq_zero_of_le h h'
 -- private theorem coeff_pow_eq_zero {g : R⟦X⟧} {b : ℕ} (hb : (constantCoeff R g) ^ b = 0)
 --   {n a : ℕ} (ha : (b * (n + 1)) ≤ a) :
 --   coeff n (g ^ a) = 0 :=
 -- pow_tendsto_zero_of_nilpotent_const' hb ha
 
 /-- (Technical Lemma)
-The if `n<a` then the `n`-th coefficient of `f ∘ g` may be
+If `(g 0)^b = 0` and `b * (n + 1) ≤ a`
+then the `n`-th coefficient of `f ∘ g` may be
 calculated using the `a`-th truncation of `f`.
 -/
 theorem coeff_comp_cts {f g : R⟦X⟧} {b : ℕ} (hb : (constantCoeff R g) ^ b = 0)
-  {n a : ℕ} (ha : (b * (n + 1)) ≤ a) :
+  {n a : ℕ} (ha : b * (n + 1) ≤ a) :
   coeff n (f ∘ g) = coeff n ((trunc a f).eval₂ (C R) g) :=
 by
   rw [coeff_comp_eq ⟨b, hb⟩]
@@ -487,7 +483,7 @@ by
   · intros
     rw [Polynomial.coeff_coe]
   · intros
-    exact monomial_zero_right _
+    apply monomial_zero_right
 
 theorem coe_comp {f : R[X]} {g : R⟦X⟧} (hg : IsNilpotent (constantCoeff R g)) :
   ((f:R⟦X⟧) ∘ g : R⟦X⟧) = f.eval₂ (C R) g :=
@@ -503,6 +499,12 @@ by
     rw [not_le] at h
     apply lt_of_succ_lt h
 
+theorem coe_comp' {f : R[X]} {g : R⟦X⟧} (hg : constantCoeff R g = 0) :
+  ((f:R⟦X⟧) ∘ g : R⟦X⟧) = f.eval₂ (C R) g :=
+by
+  apply coe_comp
+  rw [hg]
+  exact IsNilpotent.zero
 
 theorem trunc_of_trunc_comp {f g : R⟦X⟧} {n : ℕ} (hg : constantCoeff R g = 0) :
   trunc n ((trunc n f : R⟦X⟧) ∘ g) = trunc n (f ∘ g) :=
@@ -516,7 +518,7 @@ by
     · rwa [one_mul, succ_le]
   · rfl
 
-theorem trunc_of_trunc_comp₂ {f g : R⟦X⟧} {n : ℕ} (hg : (constantCoeff R g)^r = 0) :
+theorem trunc_of_trunc_comp' {f g : R⟦X⟧} {n : ℕ} (hg : (constantCoeff R g)^r = 0) :
   trunc n ((trunc (r*n) f : R⟦X⟧) ∘ g) = trunc n (f ∘ g) :=
 by
   ext m
@@ -526,6 +528,16 @@ by
     · apply Nat.mul_le_mul (by rfl)
       rwa [succ_le]
   · rfl
+
+private lemma pow_zero_eq_zero {a : R} (ha : a^0 = 0) {f g : R⟦X⟧} :
+  f = g :=
+by
+  rw [_root_.pow_zero] at ha
+  calc
+    _ = (C R 1) * f := by rw [map_one, one_mul]
+    _ = 0           := by rw [ha, map_zero, zero_mul]
+    _ = (C R 1) * g := by rw [ha, map_zero, zero_mul]
+    _ = g           := by rw [map_one, one_mul]
 
 @[simp]
 theorem mul_comp (f g h : R⟦X⟧) :
@@ -538,14 +550,8 @@ by
     case neg =>
       clear hh
       rw [not_lt, nonpos_iff_eq_zero] at hr'
-      rw [hr', _root_.pow_zero] at hr
-      calc
-        _ = (C R 1) * ((f*g).comp h)            := by rw [map_one, one_mul]
-        _ = (C R 0) * (f*g).comp h              := by rw [hr]
-        _ = 0                                   := by rw [map_zero, zero_mul]
-        _ = (C R 0) * ((f.comp h) * (g.comp h)) := by rw [map_zero, zero_mul]
-        _ = (C R 1) * ((f.comp h) * (g.comp h)) := by rw [hr]
-        _ = (f.comp h) * (g.comp h)             := by rw [map_one, one_mul]
+      rw [hr'] at hr
+      apply pow_zero_eq_zero hr
     case pos =>
       ext n
       set T : R⟦X⟧ → R[X] := trunc (r* (n + 1)) with hT
@@ -563,7 +569,7 @@ by
         _ = coeff n (T' ((T f : R⟦X⟧) ∘ h) * T' ((T g : R⟦X⟧) ∘ h) : R⟦X⟧) :=
           by rw [coeff_mul_cts _ _ hn hn]
         _ = coeff n (T' (f ∘ h) * T' (g ∘ h) : R⟦X⟧) :=
-          by rw [hT, hT', trunc_of_trunc_comp₂ hr, trunc_of_trunc_comp₂ hr]
+          by rw [hT, hT', trunc_of_trunc_comp' hr, trunc_of_trunc_comp' hr]
         _ = coeff n (f.comp h * g.comp h) :=
           by rw [←(coeff_mul_cts (f ∘ h) (g ∘ h)) hn hn]
   · rw [comp_eq_zero hh, comp_eq_zero hh, zero_mul]
@@ -583,6 +589,13 @@ theorem one_comp {f : R⟦X⟧} (hf : IsNilpotent (constantCoeff R f)) : (1 ∘ 
 by
   ext
   rw [coeff_comp_cts hf.choose_spec (le_of_lt (lt_succ_self _)), trunc_one, eval₂_one]
+
+@[simp]
+theorem one_comp' {f : R⟦X⟧} (hf : constantCoeff R f = 0) : (1 ∘ f : R⟦X⟧) = 1 :=
+by
+  apply one_comp
+  rw [hf]
+  exact IsNilpotent.zero
 
 @[simp]
 theorem comp_zero (f : R⟦X⟧) : f ∘ 0 = C R (constantCoeff R f) :=
@@ -671,6 +684,37 @@ by
   have : r * (n + 1) ≤ r * (n + 1) + 2
   · apply Nat.le_add_right
   rw [coeff_comp_cts h this, trunc_X, eval₂_X]
+
+theorem X_comp' {f : R⟦X⟧} (h : constantCoeff R f = 0) : (X ∘ f : R⟦X⟧) = f :=
+by
+  apply X_comp
+  rw [h]
+  exact IsNilpotent.zero
+
+theorem IsNilpotent_constantCoeff_comp 
+    (hf : IsNilpotent (constantCoeff R f))
+    (hg : IsNilpotent (constantCoeff R g)) :
+  IsNilpotent (constantCoeff R (f ∘ g)) :=
+by
+  sorry
+
+
+theorem comp_assoc {f g h : R⟦X⟧}
+  (hg : IsNilpotent (constantCoeff R g)) (hh : IsNilpotent (constantCoeff R h)):
+  (f ∘ g) ∘ h = f.comp (g ∘ h) :=
+by
+  have hgh := IsNilpotent_constantCoeff_comp hg hh
+  obtain ⟨rg,hg⟩ := hg
+  obtain ⟨rh,hh⟩ := hh
+  obtain ⟨rgh,hgh⟩ := hgh
+  ext n
+  set Nf := max (rg * rh * (n+1)) (rgh * (n+1))
+  have : rgh * (n+1) ≤ Nf := le_max_right _ _
+  rw [coeff_comp_cts hgh this]
+  rw [coeff_comp_cts hh (by rfl)]
+  rw [←trunc_of_trunc_comp' hg]
+  rw [coe_comp]
+  sorry
 
 
 

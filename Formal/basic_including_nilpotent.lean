@@ -674,10 +674,13 @@ by
     exact one_lt_succ_succ n
 
 @[simp]
-theorem X_comp {f : R⟦X⟧} (h : constantCoeff R f = 0) : (X ∘ f : R⟦X⟧) = f :=
+theorem X_comp {f : R⟦X⟧} (h : IsNilpotent (constantCoeff R f)) : (X ∘ f : R⟦X⟧) = f :=
 by
   ext n
-  rw [coeff_comp_cts h (lt_add_of_pos_right n (succ_pos 1)), trunc_X, eval₂_X]
+  obtain ⟨r,h⟩ := h
+  have : r * (n + 1) ≤ r * (n + 1) + 2
+  · apply Nat.le_add_right
+  rw [coeff_comp_cts h this, trunc_X, eval₂_X]
 
 
 

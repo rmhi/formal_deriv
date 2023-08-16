@@ -653,7 +653,10 @@ by
 theorem comp_X (f : R⟦X⟧) : f ∘ X = f :=
 by
   ext n
-  rw [coeff_comp_eq (@constantCoeff_X R _), eval₂_X_eq_coe, ←coeff_cts]
+  have : (constantCoeff R X)^1 = 0
+  · rw [constantCoeff_X, pow_one]
+  rw [coeff_comp_cts this (by rfl), eval₂_X_eq_coe, ←coeff_cts]
+  rw [one_mul]
   exact lt_succ_self n
 
 @[simp]

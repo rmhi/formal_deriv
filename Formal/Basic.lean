@@ -479,7 +479,7 @@ by
       _ ⊆ Finset.range n                  := Iff.mpr Finset.range_subset hn
       _ = Finset.Ico 0 n                  := by rw [Finset.range_eq_Ico]
   nth_rw 2 [←sum_monomial_eq f]
-  rw [trunc, sum_eq_of_subset f _ _ _ this, Finset.sum_congr rfl]
+  rw [trunc, sum_eq_of_subset (hs := this), Finset.sum_congr rfl]
   · intros
     rw [Polynomial.coeff_coe]
   · intros
@@ -699,8 +699,25 @@ by
   · rw [comp_eq hg]
     simp_rw [←coeff_zero_eq_constantCoeff_apply]
     rw [coeff_mk, zero_add, mul_one, Polynomial.eval₂_eq_sum_range, map_sum]
-    
-    sorry
+    apply isNilpotent_sum
+    intro i hi
+    rw [coeff_zero_eq_constantCoeff_apply, map_mul]
+    cases i with
+    | zero => 
+      apply Commute.isNilpotent_mul_left
+      apply Commute.all
+      simp only [Eq.ndrec, zero_eq, coeff_zero_eq_constantCoeff, constantCoeff_C]
+      rw [coeff_trunc]
+      split
+      · rwa [coeff_zero_eq_constantCoeff_apply]
+      · exact IsNilpotent.zero
+    | succ n =>
+      apply Commute.isNilpotent_mul_right
+      apply Commute.all
+      rw [map_pow, _root_.pow_succ]
+      apply Commute.isNilpotent_mul_left
+      apply Commute.all
+      exact hg
   · rw [comp_eq_zero hg, map_zero]
     exact IsNilpotent.zero
 

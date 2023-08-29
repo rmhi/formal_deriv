@@ -691,6 +691,14 @@ by
   rw [h]
   exact IsNilpotent.zero
 
+lemma _root_.isNilpotent_pow_succ [Semiring S] {x : S} (hx : IsNilpotent x) :
+  IsNilpotent (x ^ (succ n)) :=
+by
+  rw [_root_.pow_succ]
+  apply Commute.isNilpotent_mul_left
+  · exact Commute.self_pow x n
+  · exact hx
+
 theorem IsNilpotent_constantCoeff_comp 
     (hf : IsNilpotent (constantCoeff R f)) ( g : R⟦X⟧ ) :
   IsNilpotent (constantCoeff R (f ∘ g)) :=
@@ -714,13 +722,10 @@ by
     | succ n =>
       apply Commute.isNilpotent_mul_right
       apply Commute.all
-      rw [map_pow, _root_.pow_succ]
-      apply Commute.isNilpotent_mul_left
-      apply Commute.all
-      exact hg
+      rw [map_pow]
+      apply isNilpotent_pow_succ hg
   · rw [comp_eq_zero hg, map_zero]
     exact IsNilpotent.zero
-
 
 theorem comp_assoc {f g h : R⟦X⟧}
   (hg : IsNilpotent (constantCoeff R g)) (hh : IsNilpotent (constantCoeff R h)):

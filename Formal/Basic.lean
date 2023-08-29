@@ -299,7 +299,6 @@ lemma comp_aux_spec (f g : R⟦X⟧) {b c : ℕ} (hb : (constantCoeff R g) ^ (b 
   | step h IH =>
     rename_i m
     change b ≤ m at h
-    simp only [comp_aux]
     rw [trunc_succ, eval₂_add, map_add, ←IH]
     convert (add_zero (M := R) _).symm
     rw [eval₂_monomial, coeff_C_mul]

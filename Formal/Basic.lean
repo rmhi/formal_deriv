@@ -53,7 +53,7 @@ open scoped Classical
 
 section CommutativeSemiring
 
-variable {R : Type} [CommSemiring R] --[DecidableEq R]
+variable {R : Type u} [CommSemiring R] --[DecidableEq R]
 
 
 /-- If `f` is a polynomial over `R`
@@ -190,7 +190,7 @@ by
     D_fun_C, smul_zero, add_zero, smul_eq_mul]
 
 /--The formal derivative of a formal power series.-/
-noncomputable def D (R : Type) [CommSemiring R]: Derivation R R⟦X⟧ R⟦X⟧
+noncomputable def D (R : Type u) [CommSemiring R]: Derivation R R⟦X⟧ R⟦X⟧
 where
   toFun             := D_fun
   map_add'          := D_fun_add
@@ -414,6 +414,15 @@ by
     contradiction
   · rfl
 
+theorem natDegree_trunc_lt' (f : R⟦X⟧) {n : ℕ} (hn :n ≠ 0): (trunc n f).natDegree < n :=
+by
+  revert hn
+  cases n with
+  | zero => tauto
+  | succ n =>
+    intro
+    apply natDegree_trunc_lt
+
 theorem constantCoeff_comp {f g : R⟦X⟧} (h : constantCoeff R g = 0 ) :
   constantCoeff R (f ∘ g) = constantCoeff R f :=
 by
@@ -609,7 +618,7 @@ when `R` is a field, so the following two results can only be stated in in the c
 The second result `inv_comp` should eventually be extended to the case that
 `R` is a commutative ring.-/
 @[simp]
-theorem inv_comp' {R : Type} [Field R]
+theorem inv_comp' {R : Type u} [Field R]
   (f g : PowerSeries R) (hf : constantCoeff R f ≠ 0) :
   (f⁻¹ ∘ g : R⟦X⟧) = (f ∘ g : R⟦X⟧)⁻¹ :=
 by
@@ -628,8 +637,8 @@ by
   case neg =>
     rw [comp_eq_zero h, comp_eq_zero h, zero_inv]
 
-theorem inv_comp {R : Type} [Field R]
-  (f g : PowerSeries R) (hf : IsUnit (constantCoeff R f)) :
+theorem inv_comp {R : Type u} [Field R]
+  (f g : R⟦X⟧) (hf : IsUnit (constantCoeff R f)) :
   (f⁻¹ ∘ g : R⟦X⟧) = (f ∘ g : R⟦X⟧)⁻¹ :=
 by
   apply inv_comp'
@@ -741,21 +750,31 @@ by
 
 -- TODO:
 -- # ASK John about the best way of dealing with a finite sum with only one non-zero term.
--- lemma rescale_eq_comp_mul_X (f : pow) (r : R) :
---   rescale r f = f ∘ (↑r * X) :=
--- begin
---   have : constantCoeff R (↑r * X) = 0,
---   {
---     simp only [coeff_zero_eq_constantCoeff,
---       map_mul, constantCoeff_X, mul_zero],
---   },
---   ext,
---   rw [coeff_rescale, coeff_comp_eq this,
---     eval₂_eq_sum_range' (C R) (natDegree_trunc_lt f n),
---     map_sum],
---   simp_rw [mul_pow, ← mul_assoc],
---   sorry,
--- end
+lemma rescale_eq_comp_mul_X (f : R⟦X⟧) (r : R) :
+  rescale r f = f.comp (r • X) :=
+by
+  have nilp : IsNilpotent <| constantCoeff R (r • X)
+  · rw [smul_eq_C_mul, map_mul, constantCoeff_X, mul_zero]
+    use 1
+    rw [_root_.pow_one]
+  set m := Exists.choose nilp with hm
+  have hm' := Exists.choose_spec nilp
+  rw [←hm] at hm'
+  by_cases m = 0
+  · case pos =>
+    apply pow_zero_eq_zero
+    rwa [h] at hm'
+  · case neg =>
+    ext n
+    have : m*(n+1) ≠ 0
+    · apply mul_ne_zero h (succ_ne_zero n)
+    rw [coeff_rescale, coeff_comp_eq nilp, ←hm,
+      eval₂_eq_sum_range' (C R) (natDegree_trunc_lt' f this)]
+    rw [map_sum, smul_eq_C_mul]
+    simp_rw [mul_pow, ← mul_assoc]
+    sorry
+
+
 -- @[simp]
 -- lemma D_rescale (f : pow) ( r : R ):
 --   D (rescale r f) = ↑r * rescale r (D f) :=
@@ -784,9 +803,9 @@ also cancellation of addition in `R`. For this reason, the next lemma is stated 
 is a `comm_ring`.-/
 /-- If `f` and `g` have the same constant term and derivative, then they are equal.-/
 theorem PowerSeries.eq_of_D_eq_of_const_eq
-  {R : Type} [CommRing R] [NoZeroSMulDivisors ℕ R]
+  {R : Type u} [CommRing R] [NoZeroSMulDivisors ℕ R]
   (f g : PowerSeries R) :
-  D (R := R) f = D (R := R) g → constantCoeff R f = constantCoeff R g → f = g :=
+  D R f = D R g → constantCoeff R f = constantCoeff R g → f = g :=
 by
   intro h1 h2
   ext n
@@ -801,8 +820,8 @@ by
 
 
 @[simp]
-theorem PowerSeries.D_inv {R : Type} [Field R] (f : PowerSeries R) :
-  D (R := R) f⁻¹ = -f⁻¹ ^ 2 * D (R := R) f :=
+theorem PowerSeries.D_inv {R : Type u} [Field R] (f : R⟦X⟧) :
+  D R f⁻¹ = -f⁻¹ ^ 2 * D R f :=
 by
   by_cases constantCoeff R f = 0
   · suffices : f⁻¹ = 0

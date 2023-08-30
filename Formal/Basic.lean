@@ -198,6 +198,13 @@ where
   map_one_eq_zero'  := D_fun_one
   leibniz'          := D_fun_mul
 
+/-this can be proved by `simp`.-/
+theorem D_mul : D R (f * g) = f * D R g + g * D R f :=
+by
+  rw [Derivation.leibniz, smul_eq_mul, smul_eq_mul]
+
+theorem D_one : D R 1 = 0 := D_fun_one
+
 @[simp]
 theorem D_C (r : R) : D R (C R r : R⟦X⟧) = 0 :=
   D_fun_C r

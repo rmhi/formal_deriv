@@ -23,7 +23,7 @@ open Nat
 #check D
 
 local notation "coeff"  => PowerSeries.coeff R
-local notation "D"      => @D R _
+local notation "D"      => D R
 
 
 namespace my_PowerSeries
@@ -78,7 +78,8 @@ by
     have : constantCoeff R (-f) = 0 := by rwa [map_neg, neg_eq_zero]
     rw [PowerSeries.eq_inv_iff_mul_eq_one]
     · apply eq_of_D_eq_of_const_eq
-      · rw [D_mul, D_comp, D_comp, D_exp, D_one, map_neg, mul_neg, mul_neg,
+      · rw [Derivation.leibniz, D_comp, D_comp, D_exp, Derivation.map_one_eq_zero,
+          map_neg, mul_neg, smul_neg, smul_eq_mul, smul_eq_mul,
           ←mul_assoc, mul_comm (exp ∘ (-f) : R⟦X⟧), mul_assoc, add_neg_self]
       · rw [map_mul, constantCoeff_comp hf, constantCoeff_comp this,
           constantCoeff_exp, map_one, mul_one]
@@ -170,12 +171,12 @@ by
         one_comp' hf, X_comp' hf, ← mul_assoc, PowerSeries.mul_inv_rev,
         mul_comm (1 + g)⁻¹, mul_assoc (1 + f)⁻¹, PowerSeries.inv_mul_cancel, mul_one]
       · rw [map_add, map_one, hg, add_zero]; exact one_ne_zero
-      all_goals rw [map_add, map_one, constantCoeff_X, add_zero]; exact one_ne_zero
+      all_goals rw [map_add, map_one, constantCoeff_X, add_zero]; exact isUnit_one
     · rw [inv_comp, add_comp, one_comp' eq, X_comp' eq, add_comm, sub_add_cancel, inv_comp, add_comp,
         one_comp' hg, X_comp' hg, ← mul_assoc, PowerSeries.mul_inv_rev, mul_assoc (1 + g)⁻¹,
         PowerSeries.inv_mul_cancel, mul_one]
       · rw [map_add, map_one, hf, add_zero]; exact one_ne_zero
-      all_goals rw [map_add, map_one, constantCoeff_X, add_zero]; exact one_ne_zero
+      all_goals rw [map_add, map_one, constantCoeff_X, add_zero]; exact isUnit_one
   · rw [constantCoeff_comp eq, map_add, constantCoeff_comp hf, constantCoeff_comp hg,
       constantCoeff_logOneAdd, add_zero]
 

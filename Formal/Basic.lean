@@ -354,11 +354,83 @@ theorem coeff_comp_cts {f g : R⟦X⟧} {b : ℕ} (hb : (constantCoeff R g) ^ b 
 by
   rw [coeff_comp_eq ⟨b, hb⟩]
   apply comp_aux_spec'
-  · simp
+  · simp only [add_pos_iff, or_true, mul_div_left]
     apply Exists.choose_spec (⟨b, hb⟩ : ∃ n, (constantCoeff R g) ^ n = 0)
   · convert pow_eq_zero_of_le _ hb
     have goo : 0 < n + 1 := by simp
     exact Iff.mpr (Nat.le_div_iff_mul_le goo) ha
+
+
+/--
+If `a^0 = 0` in `R`, then any two power series are equal.
+This is a technical lemma, which deals with the following situation.
+We often assume `IsNilpotent : constantCoeff f`, which means that
+`(constantCoeff f) ^ n = 0` for some `n`. We may effectively assume that
+`n` is positive, since otherwise this lemma shows that all equalities are
+true.
+-/
+private lemma pow_zero_eq_zero {a : R} (ha : a^0 = 0) {f g : R⟦X⟧} :
+  f = g :=
+by
+  rw [_root_.pow_zero] at ha
+  calc
+    _ = (C R 1) * f := by rw [map_one, one_mul]
+    _ = 0           := by rw [ha, map_zero, zero_mul]
+    _ = (C R 1) * g := by rw [ha, map_zero, zero_mul]
+    _ = g           := by rw [map_one, one_mul]
+
+theorem natDegree_trunc_lt (f : R⟦X⟧) (n : ℕ) : (trunc (n + 1) f).natDegree < n + 1 :=
+by
+  rw [lt_succ_iff, natDegree_le_iff_coeff_eq_zero]
+  intro m hm
+  rw [coeff_trunc]
+  split_ifs with h
+  · rw [lt_succ, ←not_lt] at h
+    contradiction
+  · rfl
+
+theorem natDegree_trunc_lt' {f : R⟦X⟧} {n : ℕ} (hn :n ≠ 0): (trunc n f).natDegree < n :=
+by
+  revert hn
+  cases n with
+  | zero => tauto
+  | succ n =>
+    intro
+    apply natDegree_trunc_lt
+
+
+theorem trunc_comp_cts {f g : R⟦X⟧} {b : ℕ} (hb : (constantCoeff R g) ^ b = 0)
+  {n c d : ℕ} (ha : b * n ≤ c) (hd : n ≤ d) :
+  trunc n (f ∘ g) = trunc n ((trunc c f).comp (trunc d g)) :=
+by
+  ext m
+  by_cases m<n
+  · have hmc : b * (m + 1) ≤ c
+    · trans b*n
+      apply Nat.mul_le_mul_left
+      rwa [Nat.succ_le_iff]
+      assumption
+    have hmd : m < d := lt_of_lt_of_le h hd
+    rw [coeff_trunc, if_pos h, coeff_comp_cts hb hmc,
+      coeff_trunc, if_pos h, Polynomial.comp]
+    wlog hc' : c ≠ 0
+    · rw [not_not] at hc'
+      rw [hc', nonpos_iff_eq_zero, _root_.mul_eq_zero, add_eq_zero] at hmc
+      simp only [and_false] at hmc
+      rw [or_false] at hmc
+      rw [hmc] at hb
+      congr
+      apply pow_zero_eq_zero hb
+    have : natDegree (trunc c f) < c := natDegree_trunc_lt' hc'
+    simp only [Polynomial.eval₂_eq_sum_range' _ this]
+    rw [map_sum]
+    simp only [coeff_C_mul, Polynomial.coeff_coe, finset_sum_coeff, Polynomial.coeff_C_mul]
+    apply Finset.sum_congr rfl
+    intro i hi
+    congr
+    sorry
+  · rw [coeff_trunc, if_neg h, coeff_trunc, if_neg h]
+
 
 /-- The "chain rule" for formal power series in one variable:
   `D (f ∘ g) = (D f) ∘ g * D g`.
@@ -404,24 +476,6 @@ We show that composition is associative,
 `X` is a 2-sided identity.
 a.rescale f = f ∘ (a*X)
 -/
-theorem natDegree_trunc_lt (f : R⟦X⟧) (n : ℕ) : (trunc (n + 1) f).natDegree < n + 1 :=
-by
-  rw [lt_succ_iff, natDegree_le_iff_coeff_eq_zero]
-  intro m hm
-  rw [coeff_trunc]
-  split_ifs with h
-  · rw [lt_succ, ←not_lt] at h
-    contradiction
-  · rfl
-
-theorem natDegree_trunc_lt' (f : R⟦X⟧) {n : ℕ} (hn :n ≠ 0): (trunc n f).natDegree < n :=
-by
-  revert hn
-  cases n with
-  | zero => tauto
-  | succ n =>
-    intro
-    apply natDegree_trunc_lt
 
 theorem constantCoeff_comp {f g : R⟦X⟧} (h : constantCoeff R g = 0 ) :
   constantCoeff R (f ∘ g) = constantCoeff R f :=
@@ -445,9 +499,9 @@ by
   · rw [coeff_trunc, if_pos h]
   · rfl
 
-@[simp]
-theorem trunc_trunc_mul_trunc (f g : R⟦X⟧) (n : ℕ) :
-  trunc n (trunc n f * trunc n g : R⟦X⟧) = trunc n (f * g) :=
+
+theorem trunc_trunc_mul (f g : R ⟦X⟧) (n : ℕ) :
+  trunc n ( (trunc n f) * g : R⟦X⟧ ) = trunc n ( f * g ) :=
 by
   ext m
   rw [coeff_trunc, coeff_trunc]
@@ -455,9 +509,26 @@ by
   · rw [coeff_mul, coeff_mul, Finset.sum_congr rfl]
     rintro ⟨a, b⟩ hab
     have ha : a < n := lt_of_le_of_lt (Finset.Nat.antidiagonal.fst_le hab) h
-    have hb : b < n := lt_of_le_of_lt (Finset.Nat.antidiagonal.snd_le hab) h
-    rw [Polynomial.coeff_coe, Polynomial.coeff_coe, coeff_trunc, coeff_trunc, if_pos ha, if_pos hb]
+    rw [Polynomial.coeff_coe, coeff_trunc, if_pos ha]
   · rfl
+
+@[simp]
+theorem trunc_trunc_mul_trunc (f g : R⟦X⟧) (n : ℕ) :
+  trunc n (trunc n f * trunc n g : R⟦X⟧) = trunc n (f * g) :=
+by
+  rw [trunc_trunc_mul, mul_comm, trunc_trunc_mul, mul_comm]
+
+@[simp]
+theorem trunc_trunc_pow (f : R⟦X⟧) (n a : ℕ) :
+  trunc n ((trunc n f) ^ a) = trunc n (f ^ a) :=
+by
+  induction a with
+  | zero =>
+    rw [_root_.pow_zero, _root_.pow_zero, Polynomial.coe_one]
+  | succ a ih =>
+    rw [_root_.pow_succ, _root_.pow_succ, Polynomial.coe_mul, Polynomial.coe_pow,
+      trunc_trunc_mul, ←trunc_trunc_mul_trunc, ←Polynomial.coe_pow, ih,
+      trunc_trunc_mul_trunc]
 
 theorem trunc_coe_eq_self {f : R[X]} {n : ℕ} (hn : n > f.natDegree) :
   trunc n (f : R⟦X⟧) = f :=
@@ -519,23 +590,6 @@ by
       rwa [succ_le]
   · rfl
 
-/--
-If `a^0 = 0` in `R`, then any two power series are equal.
-This is a technical lemma, which deals with the following situation.
-We often assume `IsNilpotent : constantCoeff f`, which means that
-`(constantCoeff f) ^ n = 0` for some `n`. We may effectively assume that
-`n` is positive, since otherwise this lemma shows that all equalities are
-true.
--/
-private lemma pow_zero_eq_zero {a : R} (ha : a^0 = 0) {f g : R⟦X⟧} :
-  f = g :=
-by
-  rw [_root_.pow_zero] at ha
-  calc
-    _ = (C R 1) * f := by rw [map_one, one_mul]
-    _ = 0           := by rw [ha, map_zero, zero_mul]
-    _ = (C R 1) * g := by rw [ha, map_zero, zero_mul]
-    _ = g           := by rw [map_one, one_mul]
 
 @[simp]
 theorem mul_comp (f g h : R⟦X⟧) :
@@ -701,8 +755,8 @@ by
   · exact Commute.self_pow x n
   · exact hx
 
-theorem IsNilpotent_constantCoeff_comp 
-    (hf : IsNilpotent (constantCoeff R f)) ( g : R⟦X⟧ ) :
+theorem IsNilpotent_constantCoeff_comp
+    (hf : IsNilpotent (constantCoeff R f)) { g : R⟦X⟧ } :
   IsNilpotent (constantCoeff R (f ∘ g)) :=
 by
   by_cases hg : IsNilpotent (constantCoeff R g)
@@ -729,15 +783,18 @@ by
   · rw [comp_eq_zero hg, map_zero]
     exact IsNilpotent.zero
 
+#check coeff_comp_cts
+
 theorem comp_assoc {f g h : R⟦X⟧}
   (hg : IsNilpotent (constantCoeff R g)) (hh : IsNilpotent (constantCoeff R h)):
   (f ∘ g) ∘ h = f.comp (g ∘ h) :=
 by
-  have hgh := IsNilpotent_constantCoeff_comp hg h
-  obtain ⟨rg,hg⟩ := hg
-  obtain ⟨rh,hh⟩ := hh
-  obtain ⟨rgh,hgh⟩ := hgh
+  have hgh : IsNilpotent (constantCoeff R (g ∘ h)) := IsNilpotent_constantCoeff_comp hg
+  -- obtain ⟨rg,hg⟩ := hg
+  -- obtain ⟨rh,hh⟩ := hh
+  -- obtain ⟨rgh,hgh⟩ := hgh
   ext n
+  rw [coeff_comp_eq hh]
   set Nf := max (rg * rh * (n+1)) (rgh * (n+1))
   have : rgh * (n+1) ≤ Nf := le_max_right _ _
   rw [coeff_comp_cts hgh this]

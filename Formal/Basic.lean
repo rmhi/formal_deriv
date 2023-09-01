@@ -572,6 +572,11 @@ by
     rw [not_le] at h
     apply lt_of_succ_lt h
 
+--TODO:
+--`theorem coe_comp_coe` if f and g are polynomials then the composition of their
+--coercions is the coercion of their compositions. 
+
+
 theorem coe_comp' {f : R[X]} {g : R⟦X⟧} (hg : constantCoeff R g = 0) :
   ((f:R⟦X⟧) ∘ g : R⟦X⟧) = f.eval₂ (C R) g :=
 by

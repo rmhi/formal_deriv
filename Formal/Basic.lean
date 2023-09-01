@@ -99,6 +99,70 @@ namespace PowerSeries
 scoped notation:9000 R "⟦X⟧" => PowerSeries R
 
 
+
+@[simp]
+theorem trunc_trunc (f : R⟦X⟧) {n : ℕ} : trunc n ↑(trunc n f) = trunc n f :=
+by
+  ext m
+  rw [coeff_trunc, coeff_trunc, Polynomial.coeff_coe]
+  split_ifs with h
+  · rw [coeff_trunc, if_pos h]
+  · rfl
+
+
+theorem trunc_trunc_mul (f g : R ⟦X⟧) (n : ℕ) :
+  trunc n ( (trunc n f) * g : R⟦X⟧ ) = trunc n ( f * g ) :=
+by
+  ext m
+  rw [coeff_trunc, coeff_trunc]
+  split_ifs with h
+  · rw [coeff_mul, coeff_mul, Finset.sum_congr rfl]
+    rintro ⟨a, b⟩ hab
+    have ha : a < n := lt_of_le_of_lt (Finset.Nat.antidiagonal.fst_le hab) h
+    rw [Polynomial.coeff_coe, coeff_trunc, if_pos ha]
+  · rfl
+
+theorem trunc_mul_trunc (f g : R ⟦X⟧) (n : ℕ) :
+  trunc n ( f * (trunc n g) : R⟦X⟧ ) = trunc n ( f * g ) :=
+by
+  rw [mul_comm, trunc_trunc_mul, mul_comm]
+
+@[simp]
+theorem trunc_trunc_mul_trunc (f g : R⟦X⟧) (n : ℕ) :
+  trunc n (trunc n f * trunc n g : R⟦X⟧) = trunc n (f * g) :=
+by
+  rw [trunc_trunc_mul, trunc_mul_trunc]
+
+@[simp]
+theorem trunc_trunc_pow (f : R⟦X⟧) (n a : ℕ) :
+  trunc n ((trunc n f) ^ a) = trunc n (f ^ a) :=
+by
+  induction a with
+  | zero =>
+    rw [_root_.pow_zero, _root_.pow_zero, Polynomial.coe_one]
+  | succ a ih =>
+    rw [_root_.pow_succ, _root_.pow_succ, Polynomial.coe_mul, Polynomial.coe_pow,
+      trunc_trunc_mul, ←trunc_trunc_mul_trunc, ←Polynomial.coe_pow, ih,
+      trunc_trunc_mul_trunc]
+
+theorem trunc_coe_eq_self {f : R[X]} {n : ℕ} (hn : n > f.natDegree) :
+  trunc n (f : R⟦X⟧) = f :=
+by
+  have this : support f ⊆ Finset.Ico 0 n
+  · calc
+      support f
+        ⊆ Finset.range (f.natDegree + 1)  := supp_subset_range_natDegree_succ
+      _ ⊆ Finset.range n                  := Iff.mpr Finset.range_subset hn
+      _ = Finset.Ico 0 n                  := by rw [Finset.range_eq_Ico]
+  nth_rw 2 [←sum_monomial_eq f]
+  rw [trunc, sum_eq_of_subset (hs := this), Finset.sum_congr rfl]
+  · intros
+    rw [Polynomial.coeff_coe]
+  · intros
+    apply monomial_zero_right
+
+
+
 /-- The function `coeff n : R⟦X⟧ → R` is continuous. I.e. `coeff n f` depends only on a sufficiently
 long truncation of the power series `f`.-/
 theorem coeff_cts (f : R⟦X⟧) {n m : ℕ} (h : n < m) : coeff R n f = coeff R n (trunc m f) :=
@@ -389,22 +453,32 @@ by
     contradiction
   · rfl
 
-theorem natDegree_trunc_lt' {f : R⟦X⟧} {n : ℕ} (hn :n ≠ 0): (trunc n f).natDegree < n :=
+-- @[simp] -- currently unused
+-- lemma trunc_zero' {f : R⟦X⟧} : trunc 0 f = 0 := rfl
+
+theorem eval₂_trunc_eq_sum_range [Semiring S] {f : R⟦X⟧} {n : ℕ} {G : R →+* S} {s : S} :
+  (trunc n f).eval₂ G s = ∑ i in Finset.range n, G (coeff R i f) * s ^ i :=
 by
-  revert hn
   cases n with
-  | zero => tauto
+  | zero => 
+    rw [zero_eq, trunc, Ico_zero_eq_range, Finset.range_zero,
+      Finset.sum_empty, Finset.sum_empty, eval₂_zero]
   | succ n =>
-    intro
-    apply natDegree_trunc_lt
+    have := natDegree_trunc_lt f n
+    rw [eval₂_eq_sum_range' (hn := this)]
+    apply Finset.sum_congr rfl
+    intro i hi
+    rw [Finset.mem_range] at hi 
+    congr
+    rw [coeff_trunc, if_pos hi]
 
 
 theorem trunc_comp_cts {f g : R⟦X⟧} {b : ℕ} (hb : (constantCoeff R g) ^ b = 0)
-  {n c d : ℕ} (ha : b * n ≤ c) (hd : n ≤ d) :
+  {n c d : ℕ} (ha : b * n ≤ c := by rfl) (hd : n ≤ d := by rfl) :
   trunc n (f ∘ g) = trunc n ((trunc c f).comp (trunc d g)) :=
 by
   ext m
-  by_cases m<n
+  by_cases m < n
   · have hmc : b * (m + 1) ≤ c
     · trans b*n
       apply Nat.mul_le_mul_left
@@ -412,23 +486,17 @@ by
       assumption
     have hmd : m < d := lt_of_lt_of_le h hd
     rw [coeff_trunc, if_pos h, coeff_comp_cts hb hmc,
-      coeff_trunc, if_pos h, Polynomial.comp]
-    wlog hc' : c ≠ 0
-    · rw [not_not] at hc'
-      rw [hc', nonpos_iff_eq_zero, _root_.mul_eq_zero, add_eq_zero] at hmc
-      simp only [and_false] at hmc
-      rw [or_false] at hmc
-      rw [hmc] at hb
-      congr
-      apply pow_zero_eq_zero hb
-    have : natDegree (trunc c f) < c := natDegree_trunc_lt' hc'
-    simp only [Polynomial.eval₂_eq_sum_range' _ this]
+      coeff_trunc, if_pos h, Polynomial.comp,
+      eval₂_trunc_eq_sum_range, eval₂_trunc_eq_sum_range]
     rw [map_sum]
     simp only [coeff_C_mul, Polynomial.coeff_coe, finset_sum_coeff, Polynomial.coeff_C_mul]
     apply Finset.sum_congr rfl
     intro i hi
+    rw [Finset.mem_range] at hi
     congr
-    sorry
+    trans Polynomial.coeff (trunc d (g^i)) m
+    · rw [coeff_trunc, if_pos hmd]
+    · rw [←trunc_trunc_pow, coeff_trunc, if_pos hmd, Polynomial.coeff_coe]
   · rw [coeff_trunc, if_neg h, coeff_trunc, if_neg h]
 
 
@@ -480,71 +548,15 @@ a.rescale f = f ∘ (a*X)
 theorem constantCoeff_comp {f g : R⟦X⟧} (h : constantCoeff R g = 0 ) :
   constantCoeff R (f ∘ g) = constantCoeff R f :=
 by
-  have : (trunc 1 f).natDegree < 1 := natDegree_trunc_lt f 0
   have h' : (constantCoeff R g)^1 = 0
   · rwa [pow_one]
   rw [←coeff_zero_eq_constantCoeff, coeff_comp_cts h',
-    eval₂_eq_sum_range' (C R) this g,
+    eval₂_trunc_eq_sum_range,
     Finset.sum_range_one,
-    _root_.pow_zero, mul_one, coeff_zero_C, coeff_trunc, if_pos zero_lt_one]
+    _root_.pow_zero, mul_one, coeff_zero_C]
   rfl
 
 
-@[simp]
-theorem trunc_trunc (f : R⟦X⟧) {n : ℕ} : trunc n ↑(trunc n f) = trunc n f :=
-by
-  ext m
-  rw [coeff_trunc, coeff_trunc, Polynomial.coeff_coe]
-  split_ifs with h
-  · rw [coeff_trunc, if_pos h]
-  · rfl
-
-
-theorem trunc_trunc_mul (f g : R ⟦X⟧) (n : ℕ) :
-  trunc n ( (trunc n f) * g : R⟦X⟧ ) = trunc n ( f * g ) :=
-by
-  ext m
-  rw [coeff_trunc, coeff_trunc]
-  split_ifs with h
-  · rw [coeff_mul, coeff_mul, Finset.sum_congr rfl]
-    rintro ⟨a, b⟩ hab
-    have ha : a < n := lt_of_le_of_lt (Finset.Nat.antidiagonal.fst_le hab) h
-    rw [Polynomial.coeff_coe, coeff_trunc, if_pos ha]
-  · rfl
-
-@[simp]
-theorem trunc_trunc_mul_trunc (f g : R⟦X⟧) (n : ℕ) :
-  trunc n (trunc n f * trunc n g : R⟦X⟧) = trunc n (f * g) :=
-by
-  rw [trunc_trunc_mul, mul_comm, trunc_trunc_mul, mul_comm]
-
-@[simp]
-theorem trunc_trunc_pow (f : R⟦X⟧) (n a : ℕ) :
-  trunc n ((trunc n f) ^ a) = trunc n (f ^ a) :=
-by
-  induction a with
-  | zero =>
-    rw [_root_.pow_zero, _root_.pow_zero, Polynomial.coe_one]
-  | succ a ih =>
-    rw [_root_.pow_succ, _root_.pow_succ, Polynomial.coe_mul, Polynomial.coe_pow,
-      trunc_trunc_mul, ←trunc_trunc_mul_trunc, ←Polynomial.coe_pow, ih,
-      trunc_trunc_mul_trunc]
-
-theorem trunc_coe_eq_self {f : R[X]} {n : ℕ} (hn : n > f.natDegree) :
-  trunc n (f : R⟦X⟧) = f :=
-by
-  have this : support f ⊆ Finset.Ico 0 n
-  · calc
-      support f
-        ⊆ Finset.range (f.natDegree + 1)  := supp_subset_range_natDegree_succ
-      _ ⊆ Finset.range n                  := Iff.mpr Finset.range_subset hn
-      _ = Finset.Ico 0 n                  := by rw [Finset.range_eq_Ico]
-  nth_rw 2 [←sum_monomial_eq f]
-  rw [trunc, sum_eq_of_subset (hs := this), Finset.sum_congr rfl]
-  · intros
-    rw [Polynomial.coeff_coe]
-  · intros
-    apply monomial_zero_right
 
 theorem coe_comp {f : R[X]} {g : R⟦X⟧} (hg : IsNilpotent (constantCoeff R g)) :
   ((f:R⟦X⟧) ∘ g : R⟦X⟧) = f.eval₂ (C R) g :=
@@ -762,7 +774,7 @@ by
   by_cases hg : IsNilpotent (constantCoeff R g)
   · rw [comp_eq hg]
     simp_rw [←coeff_zero_eq_constantCoeff_apply]
-    rw [coeff_mk, zero_add, mul_one, Polynomial.eval₂_eq_sum_range, map_sum]
+    rw [coeff_mk, zero_add, mul_one, eval₂_trunc_eq_sum_range, map_sum]
     apply isNilpotent_sum
     intro i hi
     rw [coeff_zero_eq_constantCoeff_apply, map_mul]
@@ -770,11 +782,8 @@ by
     | zero => 
       apply Commute.isNilpotent_mul_left
       apply Commute.all
-      simp only [Eq.ndrec, zero_eq, coeff_zero_eq_constantCoeff, constantCoeff_C]
-      rw [coeff_trunc]
-      split
-      · rwa [coeff_zero_eq_constantCoeff_apply]
-      · exact IsNilpotent.zero
+      rw [zero_eq, coeff_zero_eq_constantCoeff, constantCoeff_C]
+      exact hf
     | succ n =>
       apply Commute.isNilpotent_mul_right
       apply Commute.all
@@ -789,10 +798,25 @@ theorem comp_assoc {f g h : R⟦X⟧}
   (hg : IsNilpotent (constantCoeff R g)) (hh : IsNilpotent (constantCoeff R h)):
   (f ∘ g) ∘ h = f.comp (g ∘ h) :=
 by
+  suffices : ∀ n, trunc n ((f ∘ g) ∘ h) = trunc n (f.comp (g ∘ h))
+  · ext m
+    specialize this m.succ
+    trans coeff R m (trunc m.succ ((f ∘ g) ∘ h))
+    · rw [Polynomial.coeff_coe, coeff_trunc, if_pos (lt.base m)]
+    · rw [this, Polynomial.coeff_coe, coeff_trunc, if_pos (lt.base m)]
+  intro n
   have hgh : IsNilpotent (constantCoeff R (g ∘ h)) := IsNilpotent_constantCoeff_comp hg
-  -- obtain ⟨rg,hg⟩ := hg
-  -- obtain ⟨rh,hh⟩ := hh
-  -- obtain ⟨rgh,hgh⟩ := hgh
+  obtain ⟨rg,hg⟩ := hg
+  obtain ⟨rh,hh⟩ := hh
+  obtain ⟨rgh,hgh⟩ := hgh
+  set N := (rg*rh).max (rh.max rgh) * n with hN
+  have hrh : rh * n ≤ N := sorry
+  have hrgh : rgh * n ≤ N := sorry
+  have hrgrh : rg * (rh * n) ≤ N := sorry 
+  rw [trunc_comp_cts hh]
+  rw [trunc_comp_cts hg hrgrh, trunc_comp_cts hgh hrgh, trunc_comp_cts hh hrh]
+  rw [Polynomial.comp_assoc]
+  
   ext n
   rw [coeff_comp_eq hh]
   set Nf := max (rg * rh * (n+1)) (rgh * (n+1))
@@ -826,7 +850,7 @@ by
     have : m*(n+1) ≠ 0
     · apply mul_ne_zero h (succ_ne_zero n)
     rw [coeff_rescale, coeff_comp_eq nilp, ←hm,
-      eval₂_eq_sum_range' (C R) (natDegree_trunc_lt' f this)]
+      eval₂_trunc_eq_sum_range]
     rw [map_sum, smul_eq_C_mul]
     simp_rw [mul_pow, ← mul_assoc]
     sorry

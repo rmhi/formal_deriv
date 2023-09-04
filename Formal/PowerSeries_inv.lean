@@ -6,21 +6,62 @@ Author: Richard M. Hill.
 import Mathlib
 import Formal.PowerSeries_comp
 
+/-
+In this file we prove, for a commutative ring `R`, that
+a power series `f : R⟦X⟧` is a unit if and only if its constant term
+is a unit.
+
+## Main results
+
+- `PowerSeries.D_misUnit_iff` : a power series is a unit iff its
+                                constant term is a unit.
+-/
+
 
 open PowerSeries Nat BigOperators Polynomial
--- open scoped Classical
 
 
 variable {R : Type u} [CommRing R]
 
 namespace PowerSeries
 
+/--The power series `∑ (a * X)^n`.-/
+def geometricSeries (a : R) := mk (λ n ↦ a^n)
+
+theorem one_sub_smul_X_mul_geometric_series_eq_one (a : R) :
+  ((1: R⟦X⟧) - a • X) * geometricSeries a = 1 :=
+by
+  ext n
+  rw [sub_mul, map_sub, smul_mul_assoc, map_smul,
+    one_mul, smul_eq_mul, coeff_one]
+  cases n with
+  | zero =>
+    rw [geometricSeries, coeff_mk, _root_.pow_zero,
+      coeff_zero_eq_constantCoeff, map_mul, constantCoeff_X,
+      zero_mul, mul_zero, sub_zero, if_pos rfl]
+  | succ n =>
+    rw [geometricSeries, coeff_mk, if_neg n.succ_ne_zero,
+      _root_.pow_succ, coeff_succ_X_mul, coeff_mk, sub_self]
+
+theorem one_add_smul_X_mul_geometric_series_eq_one (a : R) :
+  ((1 : R⟦X⟧) + a • X) * geometricSeries (-a) = 1 :=
+by
+  have := one_sub_smul_X_mul_geometric_series_eq_one (-a)
+  rwa [neg_smul, sub_neg_eq_add] at this
+
+theorem C_unit_add_X_mul_inv_smul_geometricSeries_eq_one (a : Rˣ) :
+  (C R a + X : R⟦X⟧) * (a.inv • geometricSeries (-a.inv)) = 1 :=
+by
+  rw [smul_eq_C_mul, ←mul_assoc, add_mul, ←map_mul,
+    Units.inv_eq_val_inv, Units.mul_inv, map_one, mul_comm X,
+    ←smul_eq_C_mul]
+  apply one_add_smul_X_mul_geometric_series_eq_one
+
 theorem isUnit_C_unit_add_X (a : Rˣ) : IsUnit (C R a + X) :=
 by
   set inverse := mk (λ n ↦ (-a)^n)  
   apply isUnit_of_mul_eq_one
-  sorry
-  sorry
+  apply C_unit_add_X_mul_inv_smul_geometricSeries_eq_one
 
 lemma isNilpotent_constantCoeff_sub_C_self (f : R⟦X⟧) :
   IsNilpotent <| constantCoeff R (f - C R (constantCoeff R f)) :=
@@ -28,13 +69,11 @@ by
   rw [map_sub, constantCoeff_C, sub_self]
   exact IsNilpotent.zero
 
-
 lemma eq_C_add_X_comp (f : R⟦X⟧) :
   f = (C R (constantCoeff R f) + X: R⟦X⟧).comp (f - C R (constantCoeff R f)) :=
 by
   have := isNilpotent_constantCoeff_sub_C_self f
   rw [add_comp, X_comp this, C_comp this, add_sub_cancel'_right]
-
 
 theorem isUnit_iff (f : R⟦X⟧) :
   (IsUnit f) ↔ IsUnit (constantCoeff R f) :=
@@ -54,8 +93,6 @@ by
     rw [Units.inv_eq_val_inv, Units.mul_inv, one_comp]
     rw [ha]
     exact isNilpotent_constantCoeff_sub_C_self f 
-
-
 
 end PowerSeries
 

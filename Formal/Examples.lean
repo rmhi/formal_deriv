@@ -53,7 +53,7 @@ by
 
 theorem D_geometricSeries : D geometricSeries = -(1 + X)⁻¹ ^ 2 :=
 by
-  rw [geometricSeries_eq, PowerSeries.D_inv, map_add, D_one, D_X, zero_add,
+  rw [geometricSeries_eq, PowerSeries.D_inv', map_add, D_one, D_X, zero_add,
     mul_one]
 
 @[simp]
@@ -187,7 +187,7 @@ by
   apply eq_of_D_eq_of_const_eq
   · rw [D_comp, map_add, D_one, zero_add, D_exp]
     apply eq_of_D_eq_of_const_eq
-    · rw [D_mul, D_comp, D_exp, D_X, D_one, D_logOneAdd, D_inv, map_add, D_one, D_X, zero_add,
+    · rw [D_mul, D_comp, D_exp, D_X, D_one, D_logOneAdd, D_inv', map_add, D_one, D_X, zero_add,
         mul_one, pow_two, mul_neg, ←mul_assoc, mul_comm, neg_add_self]
     · rw [D_X, map_one, D_logOneAdd, map_mul, constantCoeff_comp constantCoeff_logOneAdd,
         constantCoeff_inv, map_add, map_one, constantCoeff_X, add_zero, inv_one, mul_one,

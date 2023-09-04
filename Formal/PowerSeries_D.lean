@@ -10,7 +10,6 @@ import Formal.PowerSeries_comp
 import Formal.Derivation_lemma
 
 
-
 /-!
 # Definitions
 
@@ -45,9 +44,6 @@ open Polynomial Nat
 
 section CommutativeSemiring
 variable {R : Type u} [CommSemiring R]
-
-
-
 
 
 /-- The formal derivative of a power series in one variable.
@@ -249,7 +245,28 @@ by
 
 
 @[simp]
-theorem D_inv {R : Type u} [Field R] (f : R⟦X⟧) :
+theorem D_inv {R : Type u} [CommRing R] (f : R⟦X⟧ˣ) :
+  D R f.inv = -f.inv ^ 2 * D R f :=
+by
+  apply Derivation.leibniz_of_mul_eq_one
+  simp only [Units.inv_eq_val_inv, Units.inv_mul]
+
+
+@[simp]
+theorem D_invOf {R : Type u} [CommRing R] (f : R⟦X⟧) [Invertible f] :
+  D R (⅟ f) = - (⅟ f) ^ 2 * D R f :=
+by
+  rw [Derivation.leibniz_invOf, smul_eq_mul]
+
+/-
+The following theorem is stated only in the case that
+`R` is a field. This is because there is currently no
+instance of `Inv R⟦X⟧` for more general base rings `R`.
+
+In the more general case, use `D_inv` or `D_invOf` instead.
+-/
+@[simp]
+theorem D_inv' {R : Type u} [Field R] (f : R⟦X⟧) :
   D R f⁻¹ = -f⁻¹ ^ 2 * D R f :=
 by
   by_cases constantCoeff R f = 0
@@ -257,7 +274,7 @@ by
     . rw [this, pow_two, zero_mul, neg_zero, zero_mul, map_zero]
     · rwa [MvPowerSeries.inv_eq_zero]
   · apply Derivation.leibniz_of_mul_eq_one
-    exact PowerSeries.inv_mul_cancel _ h
+    exact PowerSeries.inv_mul_cancel (h := h)
 
 
 

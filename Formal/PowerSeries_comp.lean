@@ -4,10 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Author: Richard M. Hill.
 -/
 import Mathlib.RingTheory.PowerSeries.Basic
---import Mathlib.RingTheory.Derivation.Basic
 import Formal.Truncation_lemmas
---import Formal.Derivation_lemma
---import Formal.PowerSeries_D
 
 /-!
 # Definitions
@@ -375,6 +372,13 @@ by
     · rw [this, zero_mul]
     · rw [one_mul]
   · rw [coeff_C, if_neg h₁]
+
+
+
+lemma C_comp {f : R⟦X⟧} (hf : IsNilpotent (constantCoeff R f)) (a : R) :
+  (C R a) ∘ f = C R a :=
+by
+  rwa [←Polynomial.coe_C, coe_comp, eval₂_C, Polynomial.coe_C]
 
 
 /-NOTE: `instance : has_inv power_series R` is currently only defined

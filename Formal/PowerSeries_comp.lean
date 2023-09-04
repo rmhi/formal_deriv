@@ -3,21 +3,21 @@ Copyright (c) 2023 Richard M. Hill. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Author: Richard M. Hill.
 -/
-import Mathlib   -- designed to be compatible with the whole of mathlib.
 import Mathlib.RingTheory.PowerSeries.Basic
-import Mathlib.RingTheory.Derivation.Basic
-
+--import Mathlib.RingTheory.Derivation.Basic
+import Formal.Truncation_lemmas
+--import Formal.Derivation_lemma
+--import Formal.PowerSeries_D
 
 /-!
 # Definitions
 
-In this file we define operations `D` (differentiation) and `comp` (composition)
+In this file we define an operation `comp` (composition)
 on formal power series in one variable (over an arbitrary commutative semi-ring).
-The derivative `D f` is defined for all power series `f`. The composition `f.comp g` only makes
-sense where some power of the constant term of `g` is zero. The composition can also be written
-as `f ∘ g`, as long as no confusion arises with other kinds of composition.
+The composition `f.comp g` always makes sense if the constant term of `g` is
+a nilpotent element of `R`. In other cases, the composition is defined to be zero.
 
-We prove the product rule and the chain rule for differentiation of formal power series.
+The composition can also be written `f ∘ g`, as long as no confusion arises with other kinds of composition.
 
 Under suitable assumptions, we prove that two power series are equal if their derivatives
 are equal and their constant terms are equal. This gives us a simple tool for proving
@@ -28,24 +28,13 @@ identity are contained in the accomanying file "Examples.lean".
 
 ## Main results
 
-- `PowerSeries.D_mul`  : the product rule (Leibniz' rule) for differentiating.
-- `PowerSeries.D_comp` : the chain rule for differentiating power series.
-
 ## Notation
 
-- `PowerSeries.D`     : the derivative `R⟦X⟧ → R⟦X⟧`
 - `PowerSeries.comp`  : the composition operation `R⟦X⟧ → R⟦X⟧ → R⟦X⟧`.
-                        `f.comp g` is also overloaded as `(f ∘ g : R⟦X⟧)`, or sometimes just `f ∘ g`.
+                        `f.comp g` is also overloaded as `(f ∘ g : R⟦X⟧)`,
+                        or sometimes just `f ∘ g`.
 -/
 
-
-
---set_option profiler true
-/-
-TODO :
-prove that composition of power series is associative.
-split off a "classical" section.
--/
 
 
 open PowerSeries Nat BigOperators Polynomial
@@ -53,268 +42,9 @@ open scoped Classical
 
 section CommutativeSemiring
 
-variable {R : Type u} [CommSemiring R] --[DecidableEq R]
-
-
-/-- If `f` is a polynomial over `R`
-  and `d` is a derivation on an `R`-algebra `A`,
-  then for all `a : A` we have
-
-    `d(f(a)) = f.derivative (a) * d a`.
-
-  TODO : prove in the following alternative way:
-  Show that both sides of the equation are derivations
-  on the polynomial ring (when regarded as functions of `f`). 
-  by `mv_polynomial.derivation_ext` they are equal iff they
-  agree in the case f=X. This case is easier as it does
-  not involve messing around with finite sums.
--/
-theorem Derivation.polynomial_eval₂ [CommSemiring A] [Algebra R A]
-  [AddCommMonoid M] [Module R M] [Module A M] [IsScalarTower R A M] (d : Derivation R A M)
-  (f : R[X]) (g : A) :
-  d (f.eval₂ (algebraMap R A) g)
-  = (eval₂ (algebraMap R A) g (derivative (R:= R) f)) • d g :=
-by
-  rw [eval₂_eq_sum_range, map_sum, Finset.sum_range_succ', Derivation.leibniz,
-    Derivation.leibniz_pow, Derivation.map_algebraMap, zero_nsmul, smul_zero, smul_zero, zero_add,
-    add_zero]
-  by_cases f.natDegree = 0
-  · rw [h, Finset.sum_range_zero, derivative_of_natDegree_zero h, eval₂_zero,
-      zero_smul]
-  · have : (derivative (R:=R) f).natDegree < f.natDegree := natDegree_derivative_lt h
-    rw [eval₂_eq_sum_range' (algebraMap R A) this, Finset.sum_smul]
-    apply Finset.sum_congr rfl
-    intros
-    rw [Derivation.leibniz, Derivation.leibniz_pow, Derivation.map_algebraMap, smul_zero, add_zero,
-      add_tsub_cancel_right, coeff_derivative, map_mul, IsScalarTower.algebraMap_smul,
-      Algebra.algebraMap_eq_smul_one, Algebra.algebraMap_eq_smul_one, Algebra.smul_mul_assoc,
-      Algebra.mul_smul_comm, one_mul, Algebra.smul_mul_assoc, Algebra.smul_mul_assoc, one_mul,
-      smul_assoc, smul_assoc, ←cast_succ, ← nsmul_eq_smul_cast]
-
-
-
+variable {R : Type u} [CommSemiring R]
 
 namespace PowerSeries
-
-scoped notation:9000 R "⟦X⟧" => PowerSeries R
-
-
-
-@[simp]
-theorem trunc_trunc (f : R⟦X⟧) {n : ℕ} : trunc n ↑(trunc n f) = trunc n f :=
-by
-  ext m
-  rw [coeff_trunc, coeff_trunc, Polynomial.coeff_coe]
-  split_ifs with h
-  · rw [coeff_trunc, if_pos h]
-  · rfl
-
-
-theorem trunc_trunc_mul (f g : R ⟦X⟧) (n : ℕ) :
-  trunc n ( (trunc n f) * g : R⟦X⟧ ) = trunc n ( f * g ) :=
-by
-  ext m
-  rw [coeff_trunc, coeff_trunc]
-  split_ifs with h
-  · rw [coeff_mul, coeff_mul, Finset.sum_congr rfl]
-    rintro ⟨a, b⟩ hab
-    have ha : a < n := lt_of_le_of_lt (Finset.Nat.antidiagonal.fst_le hab) h
-    rw [Polynomial.coeff_coe, coeff_trunc, if_pos ha]
-  · rfl
-
-theorem trunc_mul_trunc (f g : R ⟦X⟧) (n : ℕ) :
-  trunc n ( f * (trunc n g) : R⟦X⟧ ) = trunc n ( f * g ) :=
-by
-  rw [mul_comm, trunc_trunc_mul, mul_comm]
-
-@[simp]
-theorem trunc_trunc_mul_trunc (f g : R⟦X⟧) (n : ℕ) :
-  trunc n (trunc n f * trunc n g : R⟦X⟧) = trunc n (f * g) :=
-by
-  rw [trunc_trunc_mul, trunc_mul_trunc]
-
-@[simp]
-theorem trunc_trunc_pow (f : R⟦X⟧) (n a : ℕ) :
-  trunc n ((trunc n f) ^ a) = trunc n (f ^ a) :=
-by
-  induction a with
-  | zero =>
-    rw [_root_.pow_zero, _root_.pow_zero, Polynomial.coe_one]
-  | succ a ih =>
-    rw [_root_.pow_succ, _root_.pow_succ, Polynomial.coe_mul, Polynomial.coe_pow,
-      trunc_trunc_mul, ←trunc_trunc_mul_trunc, ←Polynomial.coe_pow, ih,
-      trunc_trunc_mul_trunc]
-
-theorem trunc_coe_eq_self {f : R[X]} {n : ℕ} (hn : n > f.natDegree) :
-  trunc n (f : R⟦X⟧) = f :=
-by
-  have this : support f ⊆ Finset.Ico 0 n
-  · calc
-      support f
-        ⊆ Finset.range (f.natDegree + 1)  := supp_subset_range_natDegree_succ
-      _ ⊆ Finset.range n                  := Iff.mpr Finset.range_subset hn
-      _ = Finset.Ico 0 n                  := by rw [Finset.range_eq_Ico]
-  nth_rw 2 [←sum_monomial_eq f]
-  rw [trunc, sum_eq_of_subset (hs := this), Finset.sum_congr rfl]
-  · intros
-    rw [Polynomial.coeff_coe]
-  · intros
-    apply monomial_zero_right
-
-
-
-/-- The function `coeff n : R⟦X⟧ → R` is continuous. I.e. `coeff n f` depends only on a sufficiently
-long truncation of the power series `f`.-/
-theorem coeff_cts (f : R⟦X⟧) {n m : ℕ} (h : n < m) : coeff R n f = coeff R n (trunc m f) :=
-by
-  rw [Polynomial.coeff_coe, coeff_trunc, if_pos h]
-
-/-- The `n`-th coefficient of a`f*g` may be calculated 
-from the truncations of `f` and `g`.-/
-theorem coeff_mul_cts (f g : R⟦X⟧) {n a b : ℕ} (ha : n < a) (hb : n < b) :
-  coeff R n (f * g) = coeff R n (trunc a f * trunc b g) :=
-by
-  rw [coeff_mul, coeff_mul]
-  apply Finset.sum_congr rfl
-  intro ⟨x,y⟩ hxy
-  have hx : x ≤ n := Finset.Nat.antidiagonal.fst_le hxy
-  have hy : y ≤ n := Finset.Nat.antidiagonal.snd_le hxy
-  congr 1 <;> apply coeff_cts
-  · exact lt_of_le_of_lt hx ha
-  · exact lt_of_le_of_lt hy hb
-
-/-- The formal derivative of a power series in one variable.-/
-noncomputable def D_fun (f : R⟦X⟧) : R⟦X⟧ :=
-  mk λ n ↦ coeff R (n + 1) f * (n + 1)
-
-theorem coeff_D_fun (f : R⟦X⟧) (n : ℕ) :
-  coeff R n f.D_fun = coeff R (n + 1) f * (n + 1) :=
-by
-  rw [D_fun, coeff_mk]
-
-theorem D_fun_coe (f : R[X]) :
-  (f : R⟦X⟧).D_fun = derivative f :=
-by
-  ext
-  rw [coeff_D_fun, Polynomial.coeff_coe, Polynomial.coeff_coe, Polynomial.coeff_derivative]
-
-theorem D_fun_add (f g : R⟦X⟧) : D_fun (f + g) = D_fun f + D_fun g :=
-by
-  ext
-  rw [coeff_D_fun, map_add, map_add, coeff_D_fun, coeff_D_fun, add_mul]
-
-theorem D_fun_C (r : R) : D_fun (C R r) = 0 :=
-by
-  ext n
-  rw [coeff_D_fun, coeff_C]
-  split_ifs with h
-  · cases succ_ne_zero n h
-  · rw [zero_mul, map_zero]
-
-theorem trunc_D_fun (f : R⟦X⟧) (n : ℕ) :
-  (trunc n f.D_fun : R⟦X⟧) = D_fun ↑(trunc (n + 1) f) :=
-by
-  ext d
-  rw [Polynomial.coeff_coe, coeff_trunc]
-  split_ifs with h
-  · have : d + 1 < n + 1 := succ_lt_succ_iff.2 h
-    rw [coeff_D_fun, coeff_D_fun, Polynomial.coeff_coe, coeff_trunc, if_pos this]
-  · have : ¬d + 1 < n + 1 := by rwa [succ_lt_succ_iff]
-    rw [coeff_D_fun, Polynomial.coeff_coe, coeff_trunc, if_neg this, zero_mul]
-
---A special case of the next theorem, used in its proof.
-private theorem D_fun_coe_mul_coe (f g : R[X]) :
-  D_fun (f * g : R⟦X⟧) = f * D_fun (g : R⟦X⟧) + g * D_fun (f : R⟦X⟧) :=
-by
-  rw [←Polynomial.coe_mul, D_fun_coe, derivative_mul,
-    D_fun_coe, D_fun_coe, add_comm, mul_comm _ g,
-    ←Polynomial.coe_mul, ←Polynomial.coe_mul, Polynomial.coe_add]
-
-/-- Leibniz rule for formal power series.-/
-theorem D_fun_mul (f g : R⟦X⟧) :
-  D_fun (f * g) = f • g.D_fun + g • f.D_fun :=
-by
-  ext n
-  have h₀ : n + 1 < n + 1 + 1 := lt_succ_self (n + 1)
-  have h₁ : n < n + 1 := lt_succ_self n
-  have h₂ : n < n + 1 + 1 := lt_of_lt_of_le h₁ (le_of_lt h₀)
-  rw [coeff_D_fun, map_add, coeff_mul_cts f g h₀ h₀,
-    smul_eq_mul, smul_eq_mul,
-    coeff_mul_cts g f.D_fun h₂ h₁,
-    coeff_mul_cts f g.D_fun h₂ h₁, trunc_D_fun, trunc_D_fun,
-    ← map_add, ← D_fun_coe_mul_coe, coeff_D_fun]
-
-theorem D_fun_one : D_fun (1 : R⟦X⟧) = 0 :=
-by
-  rw [←map_one (C R), D_fun_C (1 : R)]
-
-theorem D_fun_smul (r : R) (f : R⟦X⟧) : D_fun (r • f) = r • D_fun f :=
-by
-  rw [smul_eq_C_mul, smul_eq_C_mul, D_fun_mul,
-    D_fun_C, smul_zero, add_zero, smul_eq_mul]
-
-/--The formal derivative of a formal power series.-/
-noncomputable def D (R : Type u) [CommSemiring R]: Derivation R R⟦X⟧ R⟦X⟧
-where
-  toFun             := D_fun
-  map_add'          := D_fun_add
-  map_smul'         := D_fun_smul
-  map_one_eq_zero'  := D_fun_one
-  leibniz'          := D_fun_mul
-
-/-this can be proved by `simp`.-/
-theorem D_mul : D R (f * g) = f * D R g + g * D R f :=
-by
-  rw [Derivation.leibniz, smul_eq_mul, smul_eq_mul]
-
-theorem D_one : D R 1 = 0 := D_fun_one
-
-@[simp]
-theorem D_C (r : R) : D R (C R r : R⟦X⟧) = 0 :=
-  D_fun_C r
-
-@[simp]
-theorem coeff_D (f : R⟦X⟧) (n : ℕ) : coeff R n (D R f) = coeff R (n + 1) f * (n + 1) :=
-  coeff_D_fun f n
-
-theorem D_coe (f : R[X]) : D R f = derivative f :=
-  D_fun_coe f
-
-@[simp]
-theorem D_X : D R (X : R⟦X⟧) = 1 :=
-by
-  ext
-  rw [coeff_D, coeff_one, coeff_X, boole_mul]
-  simp_rw [add_left_eq_self]
-  split_ifs with h
-  · rw [h, cast_zero, zero_add]
-  · rfl
-
-theorem trunc_D (f : R⟦X⟧) (n : ℕ) :
-  trunc n (D R f) = derivative (trunc (n + 1) f) :=
-by
-  apply coe_inj.mp
-  rw [←D_coe]
-  apply trunc_D_fun
-
-theorem trunc_D' (f : R⟦X⟧) (n : ℕ) :
-  trunc (n-1) (D R f) = derivative (trunc n f) :=
-by
-  cases n with
-  | zero =>
-    simp only [zero_eq, ge_iff_le, tsub_eq_zero_of_le]
-    rfl
-  | succ n =>
-    rw [Nat.succ_sub_one, trunc_D]
-
-theorem trunc_succ (f : R⟦X⟧) (n : ℕ) :
-  trunc n.succ f = trunc n f + Polynomial.monomial n (coeff R n f) :=
-by
-  rw [trunc, Ico_zero_eq_range, Finset.sum_range_succ, trunc, Ico_zero_eq_range]
-
-theorem D_coe_comp (f : R[X]) (g : R⟦X⟧) : D R (f.eval₂ (C R) g)
-  = (derivative (R := R) f).eval₂ (C R) g * D R g :=
-  Derivation.polynomial_eval₂ (D R) f g
 
 lemma pow_tendsto_zero_of_nilpotent_const' {f : R⟦X⟧} {b : ℕ} (hb : (constantCoeff R f) ^ b = 0)
     ⦃n m : ℕ⦄ (hm : b * (n + 1) ≤ m) : coeff R n (f ^ m) = 0 := by
@@ -499,42 +229,6 @@ by
     · rw [←trunc_trunc_pow, coeff_trunc, if_pos hmd, Polynomial.coeff_coe]
   · rw [coeff_trunc, if_neg h, coeff_trunc, if_neg h]
 
-
-/-- The "chain rule" for formal power series in one variable:
-  `D (f ∘ g) = (D f) ∘ g * D g`.
-If `g` has non-nilpotent constant term then the equation
-is trivially true, with both sides equal to zero.
--/
-@[simp]
-theorem D_comp (f g : R⟦X⟧) : D R (f ∘ g) = (D R f ∘ g : R⟦X⟧) * D R g :=
-by
-  by_cases IsNilpotent (constantCoeff R g)
-  · by_cases hh : h.choose > 0 
-    · ext n
-      rw [coeff_D, coeff_comp_eq h, ←coeff_D, D_coe_comp, coeff_mul,
-        coeff_mul, Finset.sum_congr rfl]
-      intro ⟨x,y⟩ hxy
-      have : x ≤ n :=
-        Finset.Nat.antidiagonal.fst_le hxy
-      rw [←trunc_D', coeff_comp_cts h.choose_spec]
-      dsimp
-      trans h.choose * (n+1)
-      · apply mul_le_mul (le_rfl)
-        apply succ_le_succ this
-        apply Nat.zero_le
-        apply Nat.zero_le
-      · apply Nat.le_pred_of_lt
-        apply Nat.mul_lt_mul_of_pos_left
-        · apply Nat.lt_succ_self
-        · exact hh
-    · simp only [gt_iff_lt, not_lt, nonpos_iff_eq_zero] at hh 
-      have := h.choose_spec
-      rw [hh, _root_.pow_zero] at this
-      suffices : (C R 1) * D R ( f ∘ g ) = (C R 1) * (D R f).comp g * D R g
-      · have that : C R 1 = 1 := rfl
-        rwa [that, one_mul, one_mul] at this
-      · rw [this, map_zero, zero_mul, zero_mul, zero_mul]
-  · rw [comp_eq_zero h, comp_eq_zero h, zero_mul, map_zero]
 
 
 /-
@@ -799,39 +493,39 @@ by
 
 #check coeff_comp_cts
 
-theorem comp_assoc {f g h : R⟦X⟧}
-  (hg : IsNilpotent (constantCoeff R g)) (hh : IsNilpotent (constantCoeff R h)):
-  (f ∘ g) ∘ h = f.comp (g ∘ h) :=
-by
-  suffices : ∀ n, trunc n ((f ∘ g) ∘ h) = trunc n (f.comp (g ∘ h))
-  · ext m
-    specialize this m.succ
-    trans coeff R m (trunc m.succ ((f ∘ g) ∘ h))
-    · rw [Polynomial.coeff_coe, coeff_trunc, if_pos (lt.base m)]
-    · rw [this, Polynomial.coeff_coe, coeff_trunc, if_pos (lt.base m)]
-  intro n
-  have hgh : IsNilpotent (constantCoeff R (g ∘ h)) := IsNilpotent_constantCoeff_comp hg
-  obtain ⟨rg,hg⟩ := hg
-  obtain ⟨rh,hh⟩ := hh
-  obtain ⟨rgh,hgh⟩ := hgh
-  set N := (rg*rh).max (rh.max rgh) * n with hN
-  have hrh : rh * n ≤ N := sorry
-  have hrgh : rgh * n ≤ N := sorry
-  have hrgrh : rg * (rh * n) ≤ N := sorry 
-  rw [trunc_comp_cts hh]
-  rw [trunc_comp_cts hg hrgrh, trunc_comp_cts hgh hrgh, trunc_comp_cts hh hrh]
-  rw [Polynomial.comp_assoc]
+-- theorem comp_assoc {f g h : R⟦X⟧}
+--   (hg : IsNilpotent (constantCoeff R g)) (hh : IsNilpotent (constantCoeff R h)):
+--   (f ∘ g) ∘ h = f.comp (g ∘ h) :=
+-- by
+--   suffices : ∀ n, trunc n ((f ∘ g) ∘ h) = trunc n (f.comp (g ∘ h))
+--   · ext m
+--     specialize this m.succ
+--     trans coeff R m (trunc m.succ ((f ∘ g) ∘ h))
+--     · rw [Polynomial.coeff_coe, coeff_trunc, if_pos (lt.base m)]
+--     · rw [this, Polynomial.coeff_coe, coeff_trunc, if_pos (lt.base m)]
+--   intro n
+--   have hgh : IsNilpotent (constantCoeff R (g ∘ h)) := IsNilpotent_constantCoeff_comp hg
+--   obtain ⟨rg,hg⟩ := hg
+--   obtain ⟨rh,hh⟩ := hh
+--   obtain ⟨rgh,hgh⟩ := hgh
+--   set N := (rg*rh).max (rh.max rgh) * n with hN
+--   have hrh : rh * n ≤ N := sorry
+--   have hrgh : rgh * n ≤ N := sorry
+--   have hrgrh : rg * (rh * n) ≤ N := sorry 
+--   rw [trunc_comp_cts hh]
+--   rw [trunc_comp_cts hg hrgrh, trunc_comp_cts hgh hrgh, trunc_comp_cts hh hrh]
+--   --rw [Polynomial.comp_assoc]
   
-  ext n
-  rw [coeff_comp_eq hh]
-  set Nf := max (rg * rh * (n+1)) (rgh * (n+1))
-  have : rgh * (n+1) ≤ Nf := le_max_right _ _
-  rw [coeff_comp_cts hgh this]
-  rw [coeff_comp_cts hh (by rfl)]
-  rw [←trunc_of_trunc_comp' hg]
-  rw [coe_comp]
-  sorry
-  sorry
+--   ext n
+--   rw [coeff_comp_eq hh]
+--   set Nf := max (rg * rh * (n+1)) (rgh * (n+1))
+--   have : rgh * (n+1) ≤ Nf := le_max_right _ _
+--   rw [coeff_comp_cts hgh this]
+--   rw [coeff_comp_cts hh (by rfl)]
+--   rw [←trunc_of_trunc_comp' hg]
+--   rw [coe_comp]
+--   sorry
+--   sorry
 
 
 -- TODO:
@@ -861,60 +555,4 @@ by
     sorry
 
 
--- @[simp]
--- lemma D_rescale (f : pow) ( r : R ):
---   D (rescale r f) = ↑r * rescale r (D f) :=
--- begin
---   rw [rescale_eq_comp_mul_X, D_comp, rescale_eq_comp_mul_X],
---   have : ↑r = C R r := by refl,
---   rw this,
---   rw C_eq_algebra_map,
---   simp only [D_X, smul_eq_mul, derivation.leibniz, mul_one, 
---     derivation.map_algebra_map, mul_zero, add_zero],
---   ring,
--- end
--- TODO : fill this in.
--- lemma comp_invertible_iff {f : pow} (h1 : coeff 0 f = 0) (h2 : is_unit (coeff 1 f)):
---   (∃ g : pow , f ∘ g = X) :=
---   sorry
-
 end PowerSeries
-
-end CommutativeSemiring
-
-open PowerSeries
-
-/-In the next lemma, we use `smul_right_inj`, which requires not only `no_smul_divisors ℕ R`, but
-also cancellation of addition in `R`. For this reason, the next lemma is stated in the case that `R`
-is a `comm_ring`.-/
-/-- If `f` and `g` have the same constant term and derivative, then they are equal.-/
-theorem PowerSeries.eq_of_D_eq_of_const_eq
-  {R : Type u} [CommRing R] [NoZeroSMulDivisors ℕ R]
-  (f g : PowerSeries R) :
-  D R f = D R g → constantCoeff R f = constantCoeff R g → f = g :=
-by
-  intro h1 h2
-  ext n
-  cases n with
-  | zero => 
-    rw [coeff_zero_eq_constantCoeff, h2]
-  | succ n => 
-    have equ : coeff R n (D (R := R) f) = coeff R n (D (R := R) g) := by rw [h1]
-    rwa [coeff_D, coeff_D, ←cast_succ, mul_comm, ←nsmul_eq_mul,
-      mul_comm, ←nsmul_eq_mul, smul_right_inj] at equ
-    exact succ_ne_zero n
-
-
-@[simp]
-theorem PowerSeries.D_inv {R : Type u} [Field R] (f : R⟦X⟧) :
-  D R f⁻¹ = -f⁻¹ ^ 2 * D R f :=
-by
-  by_cases constantCoeff R f = 0
-  · suffices : f⁻¹ = 0
-    . rw [this, pow_two, zero_mul, neg_zero, zero_mul, map_zero]
-    · rwa [MvPowerSeries.inv_eq_zero]
-  · apply Derivation.leibniz_of_mul_eq_one
-    exact PowerSeries.inv_mul_cancel _ h
-
-
-

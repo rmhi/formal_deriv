@@ -1,4 +1,4 @@
-import Formal.Basic
+import Formal.PowerSeries_D
 
 
 -------------------------------------------------------
@@ -49,10 +49,11 @@ by
   · rw [map_add, map_one, constantCoeff_X, add_zero]
     exact one_ne_zero
 
+#check D_inv
 
 theorem D_geometricSeries : D geometricSeries = -(1 + X)⁻¹ ^ 2 :=
 by
-  rw [geometricSeries_eq, D_inv, map_add, D_one, D_X, zero_add,
+  rw [geometricSeries_eq, PowerSeries.D_inv, map_add, D_one, D_X, zero_add,
     mul_one]
 
 @[simp]

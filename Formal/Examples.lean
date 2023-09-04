@@ -1,4 +1,4 @@
-import Formal.basic
+import Formal.PowerSeries_D
 
 
 -------------------------------------------------------
@@ -23,7 +23,7 @@ open Nat
 #check D
 
 local notation "coeff"  => PowerSeries.coeff R
-local notation "D"      => @D R _
+local notation "D"      => D R
 
 
 namespace my_PowerSeries
@@ -49,10 +49,11 @@ by
   · rw [map_add, map_one, constantCoeff_X, add_zero]
     exact one_ne_zero
 
+#check D_inv
 
 theorem D_geometricSeries : D geometricSeries = -(1 + X)⁻¹ ^ 2 :=
 by
-  rw [geometricSeries_eq, D_inv, map_add, D_one, D_X, zero_add,
+  rw [geometricSeries_eq, PowerSeries.D_inv', map_add, D_one, D_X, zero_add,
     mul_one]
 
 @[simp]
@@ -73,19 +74,21 @@ by
 @[simp]
 theorem exp_neg {f : R⟦X⟧} : (exp ∘ (-f) : R⟦X⟧) = (exp ∘ f : R⟦X⟧)⁻¹ :=
 by
-  by_cases hf : constantCoeff R f = 0
-  · have : constantCoeff R (-f) = 0 := by rw [map_neg, hf, neg_eq_zero]
+  by_cases hf : IsNilpotent ( constantCoeff R f )
+  · rw [isNilpotent_iff_eq_zero] at hf
+    have : constantCoeff R (-f) = 0 := by rwa [map_neg, neg_eq_zero]
     rw [PowerSeries.eq_inv_iff_mul_eq_one]
     · apply eq_of_D_eq_of_const_eq
-      · rw [D_mul, D_comp, D_comp, D_exp, D_one, map_neg, mul_neg, mul_neg,
+      · rw [Derivation.leibniz, D_comp, D_comp, D_exp, Derivation.map_one_eq_zero,
+          map_neg, mul_neg, smul_neg, smul_eq_mul, smul_eq_mul,
           ←mul_assoc, mul_comm (exp ∘ (-f) : R⟦X⟧), mul_assoc, add_neg_self]
       · rw [map_mul, constantCoeff_comp hf, constantCoeff_comp this,
           constantCoeff_exp, map_one, mul_one]
     · rw [constantCoeff_comp hf, constantCoeff_exp]
       exact one_ne_zero
-  · have : ¬constantCoeff R (-f) = 0 := by rw [map_neg, neg_eq_zero]; exact hf
-    rw [comp, if_neg this, comp, if_neg hf, MvPowerSeries.zero_inv]
-
+  · have : ¬IsNilpotent (constantCoeff R (-f) )
+    · rwa [map_neg, isNilpotent_neg_iff]
+    rw [comp_eq_zero this, comp_eq_zero hf, zero_inv]
 
 @[simp]
 theorem exp_add (f g : R⟦X⟧) (hf : constantCoeff R f = 0) (hg : constantCoeff R g = 0) :
@@ -141,9 +144,9 @@ theorem d_log_comp_exp : D (logOneAdd ∘ (exp - 1 : R⟦X⟧)) = 1 :=
 by
   rw [D_comp, D_logOneAdd, map_sub, D_one, sub_zero, D_exp]
   have : (1 + X : R⟦X⟧).comp (exp - 1) = exp
-  · rw [add_comp, X_comp const_exp_sub_one, one_comp const_exp_sub_one, add_sub_cancel'_right]
+  · rw [add_comp, X_comp' const_exp_sub_one, one_comp' const_exp_sub_one, add_sub_cancel'_right]
   · nth_rw 2 [← this]
-    rw [← mul_comp, PowerSeries.inv_mul_cancel, one_comp const_exp_sub_one]
+    rw [← mul_comp, PowerSeries.inv_mul_cancel, one_comp' const_exp_sub_one]
     rw [map_add, constantCoeff_one, constantCoeff_X, add_zero]
     exact one_ne_zero
 
@@ -165,16 +168,16 @@ by
   · rw [D_comp, map_sub, D_mul, map_add, map_add, map_add, D_one, D_comp, D_comp, zero_add,
       sub_zero, zero_add, mul_add, D_logOneAdd, add_comm]
     congr 1
-    · rw [inv_comp, add_comp, one_comp eq, X_comp eq, add_comm, sub_add_cancel, inv_comp, add_comp,
-        one_comp hf, X_comp hf, ← mul_assoc, PowerSeries.mul_inv_rev,
+    · rw [inv_comp, add_comp, one_comp' eq, X_comp' eq, add_comm, sub_add_cancel, inv_comp, add_comp,
+        one_comp' hf, X_comp' hf, ← mul_assoc, PowerSeries.mul_inv_rev,
         mul_comm (1 + g)⁻¹, mul_assoc (1 + f)⁻¹, PowerSeries.inv_mul_cancel, mul_one]
       · rw [map_add, map_one, hg, add_zero]; exact one_ne_zero
-      all_goals rw [map_add, map_one, constantCoeff_X, add_zero]; exact one_ne_zero
-    · rw [inv_comp, add_comp, one_comp eq, X_comp eq, add_comm, sub_add_cancel, inv_comp, add_comp,
-        one_comp hg, X_comp hg, ← mul_assoc, PowerSeries.mul_inv_rev, mul_assoc (1 + g)⁻¹,
+      all_goals rw [map_add, map_one, constantCoeff_X, add_zero]; exact isUnit_one
+    · rw [inv_comp, add_comp, one_comp' eq, X_comp' eq, add_comm, sub_add_cancel, inv_comp, add_comp,
+        one_comp' hg, X_comp' hg, ← mul_assoc, PowerSeries.mul_inv_rev, mul_assoc (1 + g)⁻¹,
         PowerSeries.inv_mul_cancel, mul_one]
       · rw [map_add, map_one, hf, add_zero]; exact one_ne_zero
-      all_goals rw [map_add, map_one, constantCoeff_X, add_zero]; exact one_ne_zero
+      all_goals rw [map_add, map_one, constantCoeff_X, add_zero]; exact isUnit_one
   · rw [constantCoeff_comp eq, map_add, constantCoeff_comp hf, constantCoeff_comp hg,
       constantCoeff_logOneAdd, add_zero]
 
@@ -184,7 +187,7 @@ by
   apply eq_of_D_eq_of_const_eq
   · rw [D_comp, map_add, D_one, zero_add, D_exp]
     apply eq_of_D_eq_of_const_eq
-    · rw [D_mul, D_comp, D_exp, D_X, D_one, D_logOneAdd, D_inv, map_add, D_one, D_X, zero_add,
+    · rw [D_mul, D_comp, D_exp, D_X, D_one, D_logOneAdd, D_inv', map_add, D_one, D_X, zero_add,
         mul_one, pow_two, mul_neg, ←mul_assoc, mul_comm, neg_add_self]
     · rw [D_X, map_one, D_logOneAdd, map_mul, constantCoeff_comp constantCoeff_logOneAdd,
         constantCoeff_inv, map_add, map_one, constantCoeff_X, add_zero, inv_one, mul_one,

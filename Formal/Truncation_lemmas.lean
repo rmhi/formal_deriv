@@ -13,7 +13,7 @@ Some lemma about truncations of power series.
 
 namespace PowerSeries 
 
-open Polynomial Nat
+open Polynomial Nat BigOperators
 
 variable {R : Type u} [CommSemiring R]
 scoped notation:9000 R "⟦X⟧" => PowerSeries R
@@ -70,7 +70,7 @@ by
       trunc_trunc_mul, ←trunc_trunc_mul_trunc, ←Polynomial.coe_pow, ih,
       trunc_trunc_mul_trunc]
 
-theorem trunc_coe_eq_self {f : R[X]} {n : ℕ} (hn : n > f.natDegree) :
+theorem trunc_coe_eq_self {f : R[X]} {n : ℕ} (hn : f.natDegree < n) :
   trunc n (f : R⟦X⟧) = f :=
 by
   have this : support f ⊆ Finset.Ico 0 n
@@ -86,6 +86,7 @@ by
   · intros
     apply monomial_zero_right
 
+@[simp]
 theorem trunc_succ (f : R⟦X⟧) (n : ℕ) :
   trunc n.succ f = trunc n f + Polynomial.monomial n (coeff R n f) :=
 by
@@ -94,9 +95,10 @@ by
 
 /-- The function `coeff n : R⟦X⟧ → R` is continuous. I.e. `coeff n f` depends only on a sufficiently
 long truncation of the power series `f`.-/
-theorem coeff_cts (f : R⟦X⟧) {n m : ℕ} (h : n < m) : coeff R n f = coeff R n (trunc m f) :=
+theorem coeff_stable {f : R⟦X⟧} {n m : ℕ} (h : n.succ ≤ m) : coeff R n f = coeff R n (trunc m f) :=
 by
-  rw [Polynomial.coeff_coe, coeff_trunc, if_pos h]
+  rw [Polynomial.coeff_coe, coeff_trunc, if_pos]
+  exact h
 
 /-- The `n`-th coefficient of a`f*g` may be calculated 
 from the truncations of `f` and `g`.-/
@@ -108,8 +110,49 @@ by
   intro ⟨x,y⟩ hxy
   have hx : x ≤ n := Finset.Nat.antidiagonal.fst_le hxy
   have hy : y ≤ n := Finset.Nat.antidiagonal.snd_le hxy
-  congr 1 <;> apply coeff_cts
+  congr 1 <;> apply coeff_stable
   · exact lt_of_le_of_lt hx ha
   · exact lt_of_le_of_lt hy hb
+
+
+theorem coeff_mul_stable (d : ℕ) {f g : R⟦X⟧} :
+  ∀ n, d.succ ≤ n → coeff R d (f * g) = coeff R d (trunc n f * trunc n g) :=
+by
+  intro _ hn
+  apply coeff_mul_cts <;>
+  exact hn
+
+
+theorem natDegree_trunc_lt (f : R⟦X⟧) (n : ℕ) : (trunc (n + 1) f).natDegree < n + 1 :=
+by
+  rw [lt_succ_iff, natDegree_le_iff_coeff_eq_zero]
+  intro m hm
+  rw [coeff_trunc]
+  split_ifs with h
+  · rw [lt_succ, ←not_lt] at h
+    contradiction
+  · rfl
+
+
+lemma trunc_zero' {f : R⟦X⟧} : trunc 0 f = 0 := rfl
+
+
+
+theorem eval₂_trunc_eq_sum_range [Semiring S] {f : R⟦X⟧} {n : ℕ} {G : R →+* S} {s : S} :
+  (trunc n f).eval₂ G s = ∑ i in Finset.range n, G (coeff R i f) * s ^ i :=
+by
+  cases n with
+  | zero => 
+    rw [zero_eq, trunc, Ico_zero_eq_range, Finset.range_zero,
+      Finset.sum_empty, Finset.sum_empty, eval₂_zero]
+  | succ n =>
+    have := natDegree_trunc_lt f n
+    rw [eval₂_eq_sum_range' (hn := this)]
+    apply Finset.sum_congr rfl
+    intro i hi
+    rw [Finset.mem_range] at hi 
+    congr
+    rw [coeff_trunc, if_pos hi]
+
 
 end PowerSeries

@@ -51,7 +51,8 @@ the power series `f = ∑ₙ fₙ * Xⁿ` to give a new power series, whose `d`-
 
   `∑ₙ fₙ * coeff R d (g ^ n)`
 
-For the composition to make sense, we require that each of these sums has finite support.
+For the formal composition to make sense, we require that each of these sums
+has finite support.
 -/
 def hasComp (f g : R⟦X⟧) : Prop :=
   ∀ d, ∃ N, ∀ n, N ≤ n → (coeff R n f) * coeff R d (g^n) = 0
@@ -69,10 +70,15 @@ scoped infixr:90 " ∘ "  => PowerSeries.comp
 
 
 /-
-Criteria for `hasComp`:
+Criteria for `hasComp`.
+
+The relation `hasComp` seems quite difficult to describe. It is neither symmetric,
+reflexive, nor transitive. It can happen that `f.hasComp g` and `g.hasComp h` but
+`¬f.hasComp (g∘h)` and `¬(f ∘ g).hasComp h`.
+For example, we may take `g=X` and `h=1`, and almost any `f`.
 -/
 
-lemma pow_X_dvd_pow_of_isNilpotent_constantCoeff {g : R⟦X⟧} (d : ℕ) (hg : IsNilpotent (constantCoeff R g)) :
+private lemma X_pow_dvd_pow_of_isNilpotent_constantCoeff {g : R⟦X⟧} (d : ℕ) (hg : IsNilpotent (constantCoeff R g)) :
   ∃ N, X^d ∣ g^N :=
 by
   obtain ⟨N, hN⟩ := hg
@@ -81,13 +87,11 @@ by
   apply pow_dvd_pow_of_dvd
   rwa [X_dvd_iff, map_pow]
 
-
-
 lemma hasComp_of_isNilpotent_constantCoeff {f g : R⟦X⟧} (hg : IsNilpotent (constantCoeff R g)) :
   f.hasComp g :=
 by
   intro d
-  obtain ⟨N, hN⟩ := pow_X_dvd_pow_of_isNilpotent_constantCoeff d.succ hg
+  obtain ⟨N, hN⟩ := X_pow_dvd_pow_of_isNilpotent_constantCoeff d.succ hg
   use N 
   intro n hn
   have : X ^ d.succ ∣ g^n
@@ -98,14 +102,12 @@ by
   rw [this, mul_zero]
   exact lt.base d
 
-
 lemma hasComp_of_constantCoeff_eq_zero {f g : R⟦X⟧} {hg : constantCoeff R g = 0} :
   f.hasComp g :=
 by
   apply hasComp_of_isNilpotent_constantCoeff
   rw [hg]
   exact IsNilpotent.zero
-
 
 lemma coe_hasComp {f : R[X]} {g : R⟦X⟧} :
   (f : R⟦X⟧).hasComp g :=
@@ -116,7 +118,6 @@ by
   rw [coeff_coe, Polynomial.coeff_eq_zero_of_natDegree_lt, zero_mul]
   rw [←Nat.succ_le]
   exact hn
-
 
 lemma add_hasComp {f₁ f₂ g : R⟦X⟧} (h₁ : f₁.hasComp g) (h₂ : f₂.hasComp g) :
   (f₁ + f₂).hasComp g :=
@@ -129,8 +130,8 @@ by
   rw [map_add, add_mul, hN₁, hN₂, add_zero]
   exact le_of_max_le_right hn
   exact le_of_max_le_left hn
-  
-lemma mul_hasComp_aux {f g : R⟦X⟧} (hfg : f.hasComp g) (n : ℕ) :
+
+private lemma uniform_stable_of_hasComp {f g : R⟦X⟧} (hfg : f.hasComp g) (n : ℕ) :
   ∃ N: ℕ, ∀ d m : ℕ, d ≤ n → N ≤ m → (coeff R m f) * coeff R d (g ^ m) = 0 :=
 by
   induction n with
@@ -157,15 +158,12 @@ by
       apply hN₂
       exact le_of_max_le_right hm
 
-
-
-
 lemma mul_hasComp {f₁ f₂ g : R⟦X⟧} (h₁ : f₁.hasComp g) (h₂ : f₂.hasComp g) :
   (f₁ * f₂).hasComp g :=
 by
   intro d
-  obtain ⟨N₁,hN₁⟩ := mul_hasComp_aux h₁ d
-  obtain ⟨N₂,hN₂⟩ := mul_hasComp_aux h₂ d
+  obtain ⟨N₁,hN₁⟩ := uniform_stable_of_hasComp h₁ d
+  obtain ⟨N₂,hN₂⟩ := uniform_stable_of_hasComp h₂ d
   use N₁ + N₂
   intro m hm
   rw [coeff_mul, Finset.sum_mul]
@@ -197,11 +195,17 @@ by
     exact h
 
 
-theorem hasComp_trans {f g h : R⟦X⟧} (hfg : f.hasComp g) (hgh : g.hasComp h) :
-  f.hasComp h :=
+@[simp]
+theorem pow_hasComp {f g : R⟦X⟧} {n : ℕ} (h : f.hasComp g):
+  (f ^ n).hasComp g :=
 by
-  sorry
-
+  induction n with
+  | zero =>
+    rw [_root_.pow_zero, ←coe_one]
+    apply coe_hasComp
+  | succ n ih =>
+    rw [_root_.pow_succ]
+    apply mul_hasComp h ih
 
 
 /-
@@ -224,17 +228,8 @@ lemma coeff_comp {f g : R⟦X⟧} (h : f.hasComp g) :
 by
   rw [comp, dif_pos h, coeff_mk]
 
-lemma coeff_comp_cts {n d : ℕ} {f g : R⟦X⟧} {h : f.hasComp g} (hn : (h d).choose ≤ n := by rfl) :
-  coeff R d (f ∘ g) = coeff R d ((trunc n f).eval₂ (C R) g) :=
-by
-  induction hn with
-  | refl => apply coeff_comp
-  | step ih1 ih2 =>
-    rw [trunc_succ, eval₂_add, map_add, ih2, eval₂_monomial, coeff_C_mul,
-      (h d).choose_spec, add_zero]
-    exact ih1
 
-lemma coeff_comp_eq_aux {n N M : ℕ} {f g : R⟦X⟧}
+private lemma coeff_trunc_eval₂_of_zero {n N M : ℕ} {f g : R⟦X⟧}
   (hN : ∀ m, N ≤ m → coeff R m f * coeff R n (g^m) = 0) (hM : N ≤ M):
   coeff R n ((trunc M f).eval₂ (C R) g) = coeff R n ((trunc N f).eval₂ (C R) g) :=
 by
@@ -243,18 +238,26 @@ by
   | step ih1 ih2 =>
     rw [trunc_succ, eval₂_add, eval₂_monomial, map_add, coeff_C_mul, ih2, hN _ ih1, add_zero]
 
+lemma coeff_comp_stable_original {n d : ℕ} {f g : R⟦X⟧} {h : f.hasComp g}
+  (hn : (h d).choose ≤ n := by rfl) :
+  coeff R d (f ∘ g) = coeff R d ((trunc n f).eval₂ (C R) g) :=
+by
+  rw [coeff_comp h]
+  symm
+  apply coeff_trunc_eval₂_of_zero
+  apply (h d).choose_spec
+  exact hn
 
-lemma coeff_comp_of_stable {n N : ℕ} {f g : R⟦X⟧} (h : f.hasComp g)
+lemma coeff_comp_of_stable_original {n N : ℕ} {f g : R⟦X⟧} (h : f.hasComp g)
   (hN : ∀ m, N ≤ m → coeff R m f * coeff R n (g^m) = 0) :
   coeff R n (f ∘ g) = coeff R n ((trunc N f).eval₂ (C R) g) :=
 by
   by_cases h' : N ≤ (h n).choose
   · rw [coeff_comp]
-    apply coeff_comp_eq_aux hN h'
+    apply coeff_trunc_eval₂_of_zero hN h'
   · rw [not_le] at h'
-    apply coeff_comp_cts
+    apply coeff_comp_stable_original
     apply le_of_lt h'
-
 
 theorem coe_comp {f : R[X]} {g : R⟦X⟧} :
   ((f:R⟦X⟧) ∘ g) = f.eval₂ (C R) g :=
@@ -262,7 +265,7 @@ by
   ext n
   have := trunc_coe_eq_self f.natDegree.lt_succ_self
   nth_rw 3 [←this]
-  apply coeff_comp_of_stable coe_hasComp
+  apply coeff_comp_of_stable_original coe_hasComp
   intro m hm
   rw [succ_le] at hm
   apply mul_eq_zero_of_left
@@ -270,11 +273,10 @@ by
   apply coeff_eq_zero_of_natDegree_lt hm
 
 
-
 theorem coeff_comp_of_constantCoeff_eq_zero {f g : R⟦X⟧} (h : constantCoeff R g = 0 ) :
   coeff R n (f ∘ g) = coeff R n ((trunc (n+1) f).eval₂ (C R) g) :=
 by
-  apply coeff_comp_of_stable
+  apply coeff_comp_of_stable_original
   apply hasComp_of_constantCoeff_eq_zero
   exact h
   intro m hm
@@ -287,28 +289,27 @@ by
   apply this
   exact hm
 
-theorem constantCoeff_comp {f g : R⟦X⟧} (h : constantCoeff R g = 0 ) :
+
+
+
+theorem constantCoeff_comp {f g : R⟦X⟧} (h : constantCoeff R g = 0) :
   constantCoeff R (f ∘ g) = constantCoeff R f :=
 by
   rw [←coeff_zero_eq_constantCoeff, coeff_comp_of_constantCoeff_eq_zero h,
     zero_add, eval₂_trunc_eq_sum_range, Finset.sum_range_one,
     _root_.pow_zero, mul_one, coeff_zero_C]
 
-
-
-lemma coeff_comp_of_stable' {n N : ℕ} {f g : R⟦X⟧} (h : f.hasComp g)
+lemma coeff_comp_of_stable {n N : ℕ} {f g : R⟦X⟧} (h : f.hasComp g)
   (hN : ∀ m, N ≤ m → coeff R m f * coeff R n (g^m) = 0) :
   coeff R n (f ∘ g) = coeff R n ((trunc N f) ∘ g) :=
 by
-  rw [coeff_comp_of_stable h hN, coe_comp]
+  rw [coeff_comp_of_stable_original h hN, coe_comp]
 
-
-
-lemma coeff_comp_cts' {n d : ℕ} {f g : R⟦X⟧} {h : f.hasComp g}
+lemma coeff_comp_stable' {n d : ℕ} {f g : R⟦X⟧} {h : f.hasComp g}
   (hn : (h d).choose ≤ n := by rfl) :
   coeff R d (f ∘ g) = coeff R d ((trunc n f) ∘ g) :=
 by
-  rw [coeff_comp_cts hn, coe_comp]
+  rw [coeff_comp_stable_original hn, coe_comp]
 
 
 lemma coeff_comp_stable {f g : R⟦X⟧} (h : f.hasComp g) (d : ℕ) :
@@ -316,12 +317,12 @@ lemma coeff_comp_stable {f g : R⟦X⟧} (h : f.hasComp g) (d : ℕ) :
 by
   use (h d).choose
   intro n hn
-  apply coeff_comp_cts' hn
+  apply coeff_comp_stable' hn
 
-lemma trunc_comp_stable_old {f g : R⟦X⟧} (hfg : hasComp f g) (d : ℕ) :
+lemma trunc_comp_stable {f g : R⟦X⟧} (hfg : hasComp f g) (d : ℕ) :
   ∃ N, ∀ n, N ≤ n → trunc d (f ∘ g) = trunc d ( (trunc n f: R⟦X⟧) ∘ g) :=
 by
-  obtain ⟨N, hN⟩ := mul_hasComp_aux hfg d
+  obtain ⟨N, hN⟩ := uniform_stable_of_hasComp hfg d
   use N
   intro n hn
   ext m
@@ -329,7 +330,7 @@ by
   split
   · induction hn with
     | refl =>
-      apply coeff_comp_of_stable' hfg
+      apply coeff_comp_of_stable hfg
       intro r
       apply hN
       apply le_of_lt
@@ -341,11 +342,11 @@ by
       assumption
   rfl
 
-theorem trunc_comp_stable {f g : R⟦X⟧}  (hfg : f.hasComp g) (d : ℕ):
-  ∃ N, ∀ M, N ≤ M → trunc d (f ∘ g) = trunc d ( (trunc M f).eval₂ (C R) g ) :=
-by
-  simp_rw [←coe_comp]
-  apply trunc_comp_stable_old hfg
+-- theorem trunc_comp_stable {f g : R⟦X⟧}  (hfg : f.hasComp g) (d : ℕ):
+--   ∃ N, ∀ M, N ≤ M → trunc d (f ∘ g) = trunc d ( (trunc M f).eval₂ (C R) g ) :=
+-- by
+--   simp_rw [←coe_comp]
+--   apply trunc_comp_stable hfg
 
 
 
@@ -356,20 +357,20 @@ by
   rw [coe_comp, coe_comp, ←coe_mul, coe_comp, eval₂_mul]
 
 
-/--This is the tricky key lemma is proving mul_comp.-/
+/--This is the tricky key lemma used in proving `mul_comp`.-/
 private theorem coeff_mul_comp_stable {f g h : R⟦X⟧} (hf :f.hasComp h)
   (hg : g.hasComp h) (d : ℕ) :
   ∃ N , ∀ M, N ≤ M →
   coeff R d ( (f * g) ∘ h) = coeff R d ( ((trunc M f) * (trunc M g)) ∘ h ) :=
 by
   have hfg := mul_hasComp hf hg
-  obtain ⟨Nf,hNf⟩ := mul_hasComp_aux hf d
-  obtain ⟨Ng,hNg⟩ := mul_hasComp_aux hg d
-  obtain ⟨Nfg, hNfg⟩ := mul_hasComp_aux hfg d
+  obtain ⟨Nf,hNf⟩ := uniform_stable_of_hasComp hf d
+  obtain ⟨Ng,hNg⟩ := uniform_stable_of_hasComp hg d
+  obtain ⟨Nfg, hNfg⟩ := uniform_stable_of_hasComp hfg d
   use max (Nf + Ng) Nfg
   intro M hM
   trans coeff R d ((trunc M (f * g)) ∘ h)
-  · apply coeff_comp_of_stable' hfg
+  · apply coeff_comp_of_stable hfg
     intro m hm
     apply hNfg
     rfl
@@ -378,7 +379,7 @@ by
     exact hm
   · rw [←trunc_trunc_mul_trunc]
     symm
-    apply coeff_comp_of_stable'
+    apply coeff_comp_of_stable
     rw [←coe_mul]
     apply coe_hasComp
     intro m hm
@@ -419,30 +420,25 @@ by
       · rw [zero_mul]
 
 @[simp]
-theorem mul_comp (f g h : R⟦X⟧) (hf : f.hasComp h) (hg : g.hasComp h) :
+theorem mul_comp {f g h : R⟦X⟧} (hf : f.hasComp h) (hg : g.hasComp h) :
   ((f * g) ∘ h : R⟦X⟧) = (f ∘ h : R⟦X⟧) * (g ∘ h : R⟦X⟧) :=
 by
   ext d
   obtain ⟨Nfg,hNfg⟩ := coeff_mul_comp_stable hf hg d
   have hN_mul := coeff_mul_stable d (f := f ∘ h) (g := g ∘ h) d.succ (by rfl)
   rw [hN_mul]
-  obtain ⟨Nf,hNf⟩ := trunc_comp_stable_old hf d.succ
-  obtain ⟨Ng,hNg⟩ := trunc_comp_stable_old hg d.succ
+  obtain ⟨Nf,hNf⟩ := trunc_comp_stable hf d.succ
+  obtain ⟨Ng,hNg⟩ := trunc_comp_stable hg d.succ
   set N := Nfg.max (Nf.max Ng)
-  rw [hNf N]
-  rw [hNg N]
-  rw [hNfg N]
+  rw [hNf N, hNg N, hNfg N]
   symm
-  rw [coeff_stable (by rfl)]
-  rw [trunc_trunc_mul_trunc, ←coe_mul_coe_comp]
-  rw [←coeff_stable (by rfl)]
+  rw [coeff_stable, trunc_trunc_mul_trunc, ←coe_mul_coe_comp, ←coeff_stable]
   apply le_max_left
-  trans max Nf Ng
+  apply le_of_max_le_right
   apply le_max_right
+  apply le_of_max_le_left
   apply le_max_right
-  trans max Nf Ng
-  apply le_max_left
-  apply le_max_right
+
 
 @[simp]
 theorem add_comp {f g h : R⟦X⟧} (hf : f.hasComp h) (hg : g.hasComp h) :
@@ -462,19 +458,74 @@ by
   apply le_max_of_le_left
   apply le_max_left
 
+theorem sum_hasComp {f : ℕ → R⟦X⟧} {N : ℕ} {g : R⟦X⟧}
+  (h : ∀ n, n < N → (f n).hasComp g) :
+  (∑ n in Finset.range N, f n).hasComp g :=
+by
+  induction N with
+  | zero =>
+    rw [zero_eq, Finset.range_zero, Finset.sum_empty,
+      ←coe_zero]
+    apply coe_hasComp
+  | succ N ih =>
+    rw [Finset.sum_range_succ]
+    apply add_hasComp
+    apply ih
+    intro n hn
+    apply h
+    apply lt_succ_of_lt hn
+    apply h
+    apply lt_succ_self
+
+
+
 
 @[simp]
 theorem one_comp {f : R⟦X⟧} : (1 ∘ f : R⟦X⟧) = 1 :=
 by
   rw [←coe_one, coe_comp, eval₂_one, coe_one]
 
+@[simp]
+theorem zero_comp {f : R⟦X⟧} : (0 ∘ f : R⟦X⟧) = 0 :=
+by
+  rw [←coe_zero, coe_comp, eval₂_zero, coe_zero]
+
+
+theorem sum_comp {f : ℕ → R⟦X⟧} {N : ℕ} {g : R⟦X⟧}
+  (h : ∀ n, n < N → (f n).hasComp g) :
+  (∑ n in Finset.range N, f n) ∘ g = ∑ n in Finset.range N, ((f n) ∘ g) :=
+by
+  induction N with
+  | zero => apply zero_comp
+  | succ N ih => 
+    rw [Finset.sum_range_succ, Finset.sum_range_succ, add_comp, ih]
+    intro n hn
+    apply h
+    apply lt_succ_of_lt hn
+    apply sum_hasComp
+    intro n hn
+    apply h
+    apply lt_succ_of_lt hn
+    apply h
+    apply lt_succ_self
+
+
+@[simp]
+theorem pow_comp {f g : R⟦X⟧} {n : ℕ} (h : f.hasComp g):
+  (f ^ n) ∘ g = (f ∘ g)^n :=
+by
+  induction n with
+  | zero =>
+    rw [_root_.pow_zero, _root_.pow_zero, one_comp]
+  | succ n ih =>
+    rw [_root_.pow_succ, _root_.pow_succ, mul_comp h, ih]
+    apply pow_hasComp h
+
+
 
 @[simp]
 theorem comp_zero (f : R⟦X⟧) : f ∘ 0 = C R (constantCoeff R f) :=
 by
-  have h : f.hasComp 0
-  · apply hasComp_of_constantCoeff_eq_zero
-    rw [map_zero]
   ext n
   rw [coeff_comp_of_constantCoeff_eq_zero (by rw [map_zero]),
     eval₂_at_zero, coeff_trunc,
@@ -486,7 +537,7 @@ by
     apply zero_lt_succ
   · rw [coeff_C, if_neg h₁]
 
-
+@[simp]
 lemma C_comp {f : R⟦X⟧} (a : R) :
   (C R a) ∘ f = C R a :=
 by
@@ -499,33 +550,39 @@ when `R` is a field, so the following two results can only be stated in in the c
 The second result `inv_comp` should eventually be extended to the case that
 `R` is a commutative ring.-/
 @[simp]
-theorem inv_comp' {R : Type u} [Field R]
-  (f g : PowerSeries R) (hf : constantCoeff R f ≠ 0) :
+theorem inv_comp' {R : Type u} [Field R] {f g : PowerSeries R}
+  (hf : constantCoeff R f ≠ 0)
+  (hg : constantCoeff R g = 0) :
   (f⁻¹ ∘ g : R⟦X⟧) = (f ∘ g : R⟦X⟧)⁻¹ :=
 by
-  by_cases IsNilpotent <| constantCoeff R g
-  case pos =>
-    have : (f⁻¹.comp g) * (f.comp g) = 1
-    · rw [←mul_comp, PowerSeries.inv_mul_cancel (h := hf), one_comp]
-    symm
-    rw [MvPowerSeries.inv_eq_iff_mul_eq_one, this]
-    · change constantCoeff R (f ∘ g) ≠ 0
-      by_contra h'
-      have : constantCoeff R 1 = 0
-      · rw [←this, map_mul, h', mul_zero]
-      rw [map_one] at this
-      apply one_ne_zero this
-  case neg =>
-    rw [comp_eq_zero h, comp_eq_zero h, zero_inv]
+  have : (f⁻¹.comp g) * (f.comp g) = 1
+  · rw [←mul_comp, PowerSeries.inv_mul_cancel (h := hf), one_comp] <;>
+    apply hasComp_of_constantCoeff_eq_zero (hg := hg)
+  symm
+  rw [MvPowerSeries.inv_eq_iff_mul_eq_one, this]
+  · change constantCoeff R (f ∘ g) ≠ 0
+    by_contra h'
+    have : constantCoeff R 1 = 0
+    · rw [←this, map_mul, h', mul_zero]
+    rw [map_one] at this
+    apply one_ne_zero this
 
-theorem inv_comp {R : Type u} [Field R]
-  (f g : R⟦X⟧) (hf : IsUnit (constantCoeff R f)) :
+
+/-
+This is the statement which generalizes to all commutative rings
+(once the instance of `Inv` is created).
+-/
+theorem inv_comp {R : Type u} [Field R] {f g : R⟦X⟧}
+  (hf : IsUnit (constantCoeff R f)) 
+  (hg : IsNilpotent <| constantCoeff R g):
   (f⁻¹ ∘ g : R⟦X⟧) = (f ∘ g : R⟦X⟧)⁻¹ :=
 by
   apply inv_comp'
   exact IsUnit.ne_zero hf
+  apply IsReduced.eq_zero
+  assumption
 
-theorem _root_.Polynomial.eval₂_X_eq_coe (f : R[X]) : f.eval₂ (C R) X = ↑f :=
+theorem _root_.Polynomial.eval₂_C_X_eq_coe (f : R[X]) : f.eval₂ (C R) X = ↑f :=
 by
   nth_rw 2 [(@eval₂_C_X R _ f).symm]
   rw [←coeToPowerSeries.ringHom_apply,
@@ -539,40 +596,14 @@ by
 theorem comp_X (f : R⟦X⟧) : f ∘ X = f :=
 by
   ext n
-  have : (constantCoeff R X)^1 = 0
-  · rw [constantCoeff_X, pow_one]
-  rw [coeff_comp_cts this (by rfl), eval₂_X_eq_coe, ←coeff_cts]
-  rw [one_mul]
-  exact lt_succ_self n
+  rw [coeff_comp_of_constantCoeff_eq_zero constantCoeff_X,
+    eval₂_C_X_eq_coe, ←coeff_stable]
 
 @[simp]
-theorem trunc_X {n : ℕ} : trunc (n + 2) X = (Polynomial.X : R[X]) :=
+theorem X_comp {f : R⟦X⟧} : (X ∘ f : R⟦X⟧) = f :=
 by
-  ext d
-  rw [coeff_trunc, coeff_X]
-  split_ifs with h₁ h₂
-  · rw [h₂, coeff_X_one]
-  · rw [coeff_X_of_ne_one h₂]
-  · rw [coeff_X_of_ne_one]
-    by_contra hd
-    apply h₁
-    rw [hd]
-    exact one_lt_succ_succ n
+  rw [←coe_X, coe_comp, eval₂_X]
 
-@[simp]
-theorem X_comp {f : R⟦X⟧} (h : IsNilpotent (constantCoeff R f)) : (X ∘ f : R⟦X⟧) = f :=
-by
-  ext n
-  obtain ⟨r,h⟩ := h
-  have : r * (n + 1) ≤ r * (n + 1) + 2
-  · apply Nat.le_add_right
-  rw [coeff_comp_cts h this, trunc_X, eval₂_X]
-
-theorem X_comp' {f : R⟦X⟧} (h : constantCoeff R f = 0) : (X ∘ f : R⟦X⟧) = f :=
-by
-  apply X_comp
-  rw [h]
-  exact IsNilpotent.zero
 
 lemma _root_.isNilpotent_pow_succ [Semiring S] {x : S} (hx : IsNilpotent x) :
   IsNilpotent (x ^ (succ n)) :=
@@ -582,66 +613,133 @@ by
   · exact Commute.self_pow x n
   · exact hx
 
-theorem IsNilpotent_constantCoeff_comp
-    (hf : IsNilpotent (constantCoeff R f)) { g : R⟦X⟧ } :
+theorem IsNilpotent_constantCoeff_comp {f g : R⟦X⟧ } 
+  (hf : IsNilpotent (constantCoeff R f)) (hg : IsNilpotent (constantCoeff R g)) :
   IsNilpotent (constantCoeff R (f ∘ g)) :=
 by
-  by_cases hg : IsNilpotent (constantCoeff R g)
-  · rw [comp_eq hg]
-    simp_rw [←coeff_zero_eq_constantCoeff_apply]
-    rw [coeff_mk, zero_add, mul_one, eval₂_trunc_eq_sum_range, map_sum]
-    apply isNilpotent_sum
-    intro i hi
-    rw [coeff_zero_eq_constantCoeff_apply, map_mul]
-    cases i with
-    | zero => 
-      apply Commute.isNilpotent_mul_left
-      apply Commute.all
-      rw [zero_eq, coeff_zero_eq_constantCoeff, constantCoeff_C]
-      exact hf
-    | succ n =>
-      apply Commute.isNilpotent_mul_right
-      apply Commute.all
-      rw [map_pow]
-      apply isNilpotent_pow_succ hg
-  · rw [comp_eq_zero hg, map_zero]
-    exact IsNilpotent.zero
-
-#check coeff_comp_cts
-
--- theorem comp_assoc {f g h : R⟦X⟧}
---   (hg : IsNilpotent (constantCoeff R g)) (hh : IsNilpotent (constantCoeff R h)):
---   (f ∘ g) ∘ h = f.comp (g ∘ h) :=
--- by
---   suffices : ∀ n, trunc n ((f ∘ g) ∘ h) = trunc n (f.comp (g ∘ h))
---   · ext m
---     specialize this m.succ
---     trans coeff R m (trunc m.succ ((f ∘ g) ∘ h))
---     · rw [Polynomial.coeff_coe, coeff_trunc, if_pos (lt.base m)]
---     · rw [this, Polynomial.coeff_coe, coeff_trunc, if_pos (lt.base m)]
---   intro n
---   have hgh : IsNilpotent (constantCoeff R (g ∘ h)) := IsNilpotent_constantCoeff_comp hg
---   obtain ⟨rg,hg⟩ := hg
---   obtain ⟨rh,hh⟩ := hh
---   obtain ⟨rgh,hgh⟩ := hgh
---   set N := (rg*rh).max (rh.max rgh) * n with hN
---   have hrh : rh * n ≤ N := sorry
---   have hrgh : rgh * n ≤ N := sorry
---   have hrgrh : rg * (rh * n) ≤ N := sorry 
---   rw [trunc_comp_cts hh]
---   rw [trunc_comp_cts hg hrgrh, trunc_comp_cts hgh hrgh, trunc_comp_cts hh hrh]
---   --rw [Polynomial.comp_assoc]
+  have hfg : f.hasComp g := hasComp_of_isNilpotent_constantCoeff hg
+  rw [←coeff_zero_eq_constantCoeff_apply, coeff_comp hfg,
+    eval₂_trunc_eq_sum_range, map_sum]
+  apply isNilpotent_sum
+  intro i hi
+  rw [coeff_zero_eq_constantCoeff_apply, map_mul]
+  cases i with
+  | zero => 
+    apply Commute.isNilpotent_mul_left
+    apply Commute.all
+    rw [zero_eq, coeff_zero_eq_constantCoeff, constantCoeff_C]
+    exact hf
+  | succ n =>
+    apply Commute.isNilpotent_mul_right
+    apply Commute.all
+    rw [map_pow]
+    apply isNilpotent_pow_succ hg
   
---   ext n
---   rw [coeff_comp_eq hh]
---   set Nf := max (rg * rh * (n+1)) (rgh * (n+1))
---   have : rgh * (n+1) ≤ Nf := le_max_right _ _
---   rw [coeff_comp_cts hgh this]
---   rw [coeff_comp_cts hh (by rfl)]
---   rw [←trunc_of_trunc_comp' hg]
---   rw [coe_comp]
---   sorry
---   sorry
+
+
+
+/-
+Although I don't have a counterexample, it seems unlikely that composition
+of formal power series is associative, even in the case when none of the terms
+default to zero.
+
+However, composition is associative in the most familiar cases, where constant terms
+are nilpotent.
+-/
+open Finset
+
+
+theorem comp_assoc {f g h : R⟦X⟧}
+  (hg : IsNilpotent (constantCoeff R g)) (hh : IsNilpotent (constantCoeff R h)):
+  (f ∘ g) ∘ h = f ∘ (g ∘ h) :=
+by
+  have hfg : f.hasComp g := hasComp_of_isNilpotent_constantCoeff hg 
+  have hgh : g.hasComp h := hasComp_of_isNilpotent_constantCoeff hh
+  have hgh_nil := IsNilpotent_constantCoeff_comp hg hh 
+  have hfgh₁ : f.hasComp (g ∘ h) := hasComp_of_isNilpotent_constantCoeff hgh_nil
+  have hfgh₂ : (f ∘ g).hasComp h := hasComp_of_isNilpotent_constantCoeff hh
+  ext d
+  obtain ⟨Nh, hNh⟩ := X_pow_dvd_pow_of_isNilpotent_constantCoeff d.succ hh
+  obtain ⟨Ng, hNg⟩ := X_pow_dvd_pow_of_isNilpotent_constantCoeff Nh.succ hg
+  trans coeff R d ((trunc Nh (f ∘ g)) ∘ h)
+  · apply coeff_comp_of_stable hfgh₂
+    intro m hm
+    apply mul_eq_zero_of_right
+    apply (X_pow_dvd_iff (n := d.succ)).1
+    trans h ^ Nh
+    · exact hNh
+    · apply pow_dvd_pow (h := hm)
+    apply lt_succ_self
+  rw [coe_comp, eval₂_trunc_eq_sum_range]
+  rw [map_sum]
+  simp_rw [coeff_C_mul]
+  trans ∑ x in range Nh, ((coeff R x ((trunc Ng f) ∘ g)) * (coeff R d (h^x)))
+  · apply sum_congr rfl
+    intro x hx
+    rw [mem_range] at hx
+    congr 1
+    apply coeff_comp_of_stable hfg
+    intro m hm
+    apply mul_eq_zero_of_right
+    apply (X_pow_dvd_iff (n := x.succ)).1
+    trans X ^ Nh.succ
+    · apply pow_dvd_pow
+      rw [succ_le_succ_iff]
+      apply le_of_lt hx
+    · trans g ^ Ng
+      exact hNg
+      apply pow_dvd_pow (h := hm)
+    apply lt_succ_self
+  symm
+  trans coeff R d ((trunc Ng f) ∘ (g ∘ h))
+  · apply coeff_comp_of_stable hfgh₁
+    intro m hm
+    apply mul_eq_zero_of_right
+    apply (X_pow_dvd_iff (n := d.succ)).1
+    trans (g ∘ h) ^ Ng
+    · rw [←pow_comp]
+      obtain ⟨φ,hφ⟩ := hNg
+      rw [hφ, mul_comp]
+      apply dvd_mul_of_dvd_left
+      rw [pow_comp, X_comp]
+      trans h ^ Nh
+      exact hNh
+      apply pow_dvd_pow
+      apply le_of_lt
+      apply lt_succ_self
+      all_goals { apply hasComp_of_isNilpotent_constantCoeff hh}
+    · apply pow_dvd_pow (h := hm)
+    apply lt_succ_self
+  · rw [coe_comp, eval₂_trunc_eq_sum_range]
+    rw [coe_comp, eval₂_trunc_eq_sum_range]
+    simp_rw [LinearMap.map_sum, sum_mul]
+    rw [sum_comm]
+    apply sum_congr rfl
+    intro a _
+    simp_rw [coeff_C_mul]
+    simp_rw [mul_assoc, ←mul_sum]
+    congr 1
+    rw [←pow_comp hgh]
+    trans coeff R d ((trunc Nh (g ^ a)) ∘ h)
+    · apply coeff_comp_of_stable
+      apply pow_hasComp
+      exact hgh
+      intro m hm
+      apply mul_eq_zero_of_right
+      apply (X_pow_dvd_iff (n := d.succ)).1
+      trans h^Nh
+      exact hNh
+      apply pow_dvd_pow (h := hm)
+      apply lt_succ_self
+    · rw [coe_comp, eval₂_trunc_eq_sum_range, map_sum]
+      apply sum_congr rfl
+      intros
+      rw [coeff_C_mul]
+
+
+#exit
+
+
 
 
 -- TODO:

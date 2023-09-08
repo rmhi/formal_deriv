@@ -95,7 +95,7 @@ by
 
 /-- The function `coeff n : R⟦X⟧ → R` is continuous. I.e. `coeff n f` depends only on a sufficiently
 long truncation of the power series `f`.-/
-theorem coeff_stable {f : R⟦X⟧} {n m : ℕ} (h : n.succ ≤ m) : coeff R n f = coeff R n (trunc m f) :=
+theorem coeff_stable {f : R⟦X⟧} {n m : ℕ} (h : n.succ ≤ m := by rfl) : coeff R n f = coeff R n (trunc m f) :=
 by
   rw [Polynomial.coeff_coe, coeff_trunc, if_pos]
   exact h
@@ -153,6 +153,22 @@ by
     rw [Finset.mem_range] at hi 
     congr
     rw [coeff_trunc, if_pos hi]
+
+
+@[simp]
+theorem trunc_X {n : ℕ} : trunc (n + 2) X = (Polynomial.X : R[X]) :=
+by
+  ext d
+  rw [coeff_trunc, coeff_X]
+  split_ifs with h₁ h₂
+  · rw [h₂, coeff_X_one]
+  · rw [coeff_X_of_ne_one h₂]
+  · rw [coeff_X_of_ne_one]
+    by_contra hd
+    apply h₁
+    rw [hd]
+    exact one_lt_succ_succ n
+
 
 
 end PowerSeries

@@ -4,7 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Author: Richard M. Hill.
 -/
 import Mathlib
-import Formal.PowerSeries_comp
+import Formal.PowerSeries_hasComp
 
 /-
 In this file we prove, for a commutative ring `R`, that
@@ -63,17 +63,18 @@ by
   apply isUnit_of_mul_eq_one
   apply C_unit_add_X_mul_inv_smul_geometricSeries_eq_one
 
-lemma isNilpotent_constantCoeff_sub_C_self (f : R⟦X⟧) :
-  IsNilpotent <| constantCoeff R (f - C R (constantCoeff R f)) :=
+lemma constantCoeff_sub_C_self (f : R⟦X⟧) :
+  constantCoeff R (f - C R (constantCoeff R f)) = 0 :=
 by
   rw [map_sub, constantCoeff_C, sub_self]
-  exact IsNilpotent.zero
 
 lemma eq_C_add_X_comp (f : R⟦X⟧) :
-  f = (C R (constantCoeff R f) + X: R⟦X⟧).comp (f - C R (constantCoeff R f)) :=
+  f = (C R (constantCoeff R f) + X) ∘ᶠ (f - C R (constantCoeff R f)) :=
 by
-  have := isNilpotent_constantCoeff_sub_C_self f
-  rw [add_comp, X_comp this, C_comp this, add_sub_cancel'_right]
+  rw [add_comp, X_comp, C_comp, add_sub_cancel'_right]
+  all_goals
+    apply hasComp_of_constantCoeff_eq_zero
+    apply constantCoeff_sub_C_self
 
 theorem isUnit_iff (f : R⟦X⟧) :
   (IsUnit f) ↔ IsUnit (constantCoeff R f) :=
@@ -91,8 +92,10 @@ by
     simp at hg
     rw [← ha, ←hg, ←mul_comp]
     rw [Units.inv_eq_val_inv, Units.mul_inv, one_comp]
-    rw [ha]
-    exact isNilpotent_constantCoeff_sub_C_self f 
+    all_goals
+      rw [ha]
+      apply hasComp_of_constantCoeff_eq_zero
+      apply constantCoeff_sub_C_self
 
 end PowerSeries
 

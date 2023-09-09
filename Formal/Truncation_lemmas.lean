@@ -3,6 +3,7 @@ Copyright (c) 2023 Richard M. Hill. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Author: Richard M. Hill.
 -/
+import Mathlib
 import Mathlib.RingTheory.PowerSeries.Basic
 
 
@@ -13,12 +14,12 @@ Some lemma about truncations of power series.
 
 namespace PowerSeries 
 
-open Polynomial Nat BigOperators
+open Polynomial Nat BigOperators Finset
 
 variable {R : Type u} [CommSemiring R]
 scoped notation:9000 R "⟦X⟧" => PowerSeries R
 
-theorem trunc_trunc_of_le (f : R⟦X⟧) {n m : ℕ} (hnm : n ≤ m) :
+theorem trunc_trunc_of_le (f : R⟦X⟧) {n m : ℕ} (hnm : n ≤ m := by rfl) :
   trunc n ↑(trunc m f) = trunc n f :=
 by
   ext d
@@ -40,9 +41,9 @@ by
   ext m
   rw [coeff_trunc, coeff_trunc]
   split_ifs with h
-  · rw [coeff_mul, coeff_mul, Finset.sum_congr rfl]
+  · rw [coeff_mul, coeff_mul, sum_congr rfl]
     rintro ⟨a, b⟩ hab
-    have ha : a < n := lt_of_le_of_lt (Finset.Nat.antidiagonal.fst_le hab) h
+    have ha : a < n := lt_of_le_of_lt (Nat.antidiagonal.fst_le hab) h
     rw [Polynomial.coeff_coe, coeff_trunc, if_pos ha]
   · rfl
 
@@ -73,14 +74,14 @@ by
 theorem trunc_coe_eq_self {f : R[X]} {n : ℕ} (hn : f.natDegree < n) :
   trunc n (f : R⟦X⟧) = f :=
 by
-  have this : support f ⊆ Finset.Ico 0 n
+  have this : support f ⊆ Ico 0 n
   · calc
       support f
-        ⊆ Finset.range (f.natDegree + 1)  := supp_subset_range_natDegree_succ
-      _ ⊆ Finset.range n                  := Iff.mpr Finset.range_subset hn
-      _ = Finset.Ico 0 n                  := by rw [Finset.range_eq_Ico]
+        ⊆ range (f.natDegree + 1)  := supp_subset_range_natDegree_succ
+      _ ⊆ range n                  := Iff.mpr range_subset hn
+      _ = Ico 0 n                  := by rw [range_eq_Ico]
   nth_rw 2 [←sum_monomial_eq f]
-  rw [trunc, sum_eq_of_subset (hs := this), Finset.sum_congr rfl]
+  rw [trunc, sum_eq_of_subset (hs := this), sum_congr rfl]
   · intros
     rw [Polynomial.coeff_coe]
   · intros
@@ -90,7 +91,7 @@ by
 theorem trunc_succ (f : R⟦X⟧) (n : ℕ) :
   trunc n.succ f = trunc n f + Polynomial.monomial n (coeff R n f) :=
 by
-  rw [trunc, Ico_zero_eq_range, Finset.sum_range_succ, trunc, Ico_zero_eq_range]
+  rw [trunc, Ico_zero_eq_range, sum_range_succ, trunc, Ico_zero_eq_range]
 
 
 /-- The function `coeff n : R⟦X⟧ → R` is continuous. I.e. `coeff n f` depends only on a sufficiently
@@ -106,10 +107,10 @@ theorem coeff_mul_cts (f g : R⟦X⟧) {n a b : ℕ} (ha : n < a) (hb : n < b) :
   coeff R n (f * g) = coeff R n (trunc a f * trunc b g) :=
 by
   rw [coeff_mul, coeff_mul]
-  apply Finset.sum_congr rfl
+  apply sum_congr rfl
   intro ⟨x,y⟩ hxy
-  have hx : x ≤ n := Finset.Nat.antidiagonal.fst_le hxy
-  have hy : y ≤ n := Finset.Nat.antidiagonal.snd_le hxy
+  have hx : x ≤ n := Nat.antidiagonal.fst_le hxy
+  have hy : y ≤ n := Nat.antidiagonal.snd_le hxy
   congr 1 <;> apply coeff_stable
   · exact lt_of_le_of_lt hx ha
   · exact lt_of_le_of_lt hy hb
@@ -139,18 +140,18 @@ lemma trunc_zero' {f : R⟦X⟧} : trunc 0 f = 0 := rfl
 
 
 theorem eval₂_trunc_eq_sum_range [Semiring S] {f : R⟦X⟧} {n : ℕ} {G : R →+* S} {s : S} :
-  (trunc n f).eval₂ G s = ∑ i in Finset.range n, G (coeff R i f) * s ^ i :=
+  (trunc n f).eval₂ G s = ∑ i in range n, G (coeff R i f) * s ^ i :=
 by
   cases n with
   | zero => 
-    rw [zero_eq, trunc, Ico_zero_eq_range, Finset.range_zero,
-      Finset.sum_empty, Finset.sum_empty, eval₂_zero]
+    rw [trunc_zero', range_zero,
+      sum_empty, eval₂_zero]
   | succ n =>
     have := natDegree_trunc_lt f n
     rw [eval₂_eq_sum_range' (hn := this)]
-    apply Finset.sum_congr rfl
+    apply sum_congr rfl
     intro i hi
-    rw [Finset.mem_range] at hi 
+    rw [mem_range] at hi 
     congr
     rw [coeff_trunc, if_pos hi]
 

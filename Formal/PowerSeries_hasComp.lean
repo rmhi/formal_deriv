@@ -74,7 +74,6 @@ needs to type `(f ∘ᶠ g : R⟦X⟧)`, which is more trouble than it is worth.
 With fewer imports, we can usually get away with `f ∘ᶠ g`.
 -/
 scoped infixr:90 " ∘ᶠ "  => PowerSeries.comp
---scoped infixr:90 " ∘ᶠᶠ "  => PowerSeries ∘ᶠ
 
 
 /-

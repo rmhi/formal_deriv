@@ -3,7 +3,7 @@ Copyright (c) 2023 Richard M. Hill. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Author: Richard M. Hill.
 -/
-import Mathlib
+-- import Mathlib
 import Mathlib.RingTheory.PowerSeries.Basic
 import Formal.Truncation_lemmas
 
@@ -28,9 +28,8 @@ identity are contained in the accomanying file "Examples.lean".
 
 ## Notation
 
-- `PowerSeries ∘ᶠ`  : the composition operation `R⟦X⟧ → R⟦X⟧ → R⟦X⟧`.
-                        `f ∘ᶠ g` is also overloaded as `(f ∘ᶠ g : R⟦X⟧)`,
-                        or sometimes just `f ∘ᶠ g`.
+- `PowerSeries.comp`  : the composition operation `R⟦X⟧ → R⟦X⟧ → R⟦X⟧`.
+                        `f.comp g` is also written `f ∘ᶠ g`.
 -/
 
 
@@ -53,36 +52,33 @@ the power series `f = ∑ₙ fₙ * Xⁿ` to give a new power series, whose `d`-
   `∑ₙ fₙ * coeff R d (g ^ n)`
 
 For the formal composition to make sense, we require that each of these sums
-has finite support.
+has finite support. There are two common situations when `f.hasComp g`:
+either `f` could be a polynomial or the constant term of `g` could be zero.
+However, there are other intermediate cases if `R` is not an integral domain.
 -/
 def hasComp (f g : R⟦X⟧) : Prop :=
   ∀ d, ∃ N, ∀ n, N ≤ n → (coeff R n f) * coeff R d (g^n) = 0
 
 
 /--Composition of power series.
-If `f.hasComp g` then `f ∘ᶠ g` is defined in the usual way. If not then `f ∘ᶠ g`
-is defined to be `0`.-/
+If `f.hasComp g` then `f ∘ᶠ g` is defined in the usual way.
+If not then `f ∘ᶠ g` defaults to `0`.-/
 noncomputable def comp (f g : R⟦X⟧) : R⟦X⟧ :=
   if h : f.hasComp g
   then mk (λ d ↦ coeff R d ((trunc (h d).choose f).eval₂ (C R) g ))
   else 0
 
-/-
-We define the notation `f ∘ᶠ g` for `f ∘ᶠ g`.
-If the whole of Mathlib is imported, then one often
-needs to type `(f ∘ᶠ g : R⟦X⟧)`, which is more trouble than it is worth.
-With fewer imports, we can usually get away with `f ∘ᶠ g`.
--/
+/- We define the notation `f ∘ᶠ g` for `f.comp g`.-/
 scoped infixr:90 " ∘ᶠ "  => PowerSeries.comp
 
 
 /-
-Criteria for `hasComp`.
+## Criteria for `hasComp`
 
 The relation `hasComp` seems quite difficult to describe. It is neither symmetric,
 reflexive, nor transitive. It can happen that `f.hasComp g` and `g.hasComp h` but
-`¬f.hasComp (g∘ᶠh)` and `¬(f ∘ᶠ g).hasComp h`.
-For example, we may take `g=X` and `h=1`, and almost any `f`.
+`¬f.hasComp (g ∘ ᶠh)` and `¬(f ∘ᶠ g).hasComp h`.
+For example, we may take `g = X` and `h = 1`, and almost any `f`.
 -/
 
 private lemma X_pow_dvd_pow_of_isNilpotent_constantCoeff {g : R⟦X⟧} (d : ℕ) (hg : IsNilpotent (constantCoeff R g)) :
@@ -178,21 +174,6 @@ by
     apply mem_insert_of_mem ht
 
 
-  --   | zero =>
-  --   rw [zero_eq, range_zero, sum_empty,
-  --     ←Polynomial.coe_zero]
-  --   apply coe_hasComp
-  -- | succ N ih =>
-  --   rw [sum_range_succ]
-  --   apply add_hasComp
-  --   apply ih
-  --   intro n hn
-  --   apply h
-  --   apply lt_succ_of_lt hn
-  --   apply h
-  --   apply lt_succ_self
-
-
 private lemma uniform_stable_of_hasComp {f g : R⟦X⟧} (hfg : f.hasComp g) (n : ℕ) :
   ∃ N: ℕ, ∀ d m : ℕ, d ≤ n → N ≤ m → (coeff R m f) * coeff R d (g ^ m) = 0 :=
 by
@@ -268,6 +249,46 @@ by
   | succ n ih =>
     rw [_root_.pow_succ]
     apply mul_hasComp h ih
+
+
+theorem hasComp_iff [IsDomain R] {f g : R⟦X⟧} :
+  f.hasComp g ↔ (∃ p : R[X], f = p) ∨ constantCoeff R g = 0 :=
+by
+  constructor
+  · intro h
+    by_contra h'
+    push_neg at h'
+    specialize h 0
+    obtain ⟨N,hN⟩ := h
+    have : f = trunc N f
+    · ext d
+      rw [coeff_coe, coeff_trunc]
+      split_ifs with h''
+      · rfl
+      · rw [not_lt] at h''
+        specialize hN d h''
+        rw [_root_.mul_eq_zero] at hN
+        cases hN with
+        | inl h => exact h
+        | inr h => 
+          exfalso
+          apply h'.2
+          rw [coeff_zero_eq_constantCoeff, map_pow] at h
+          apply pow_eq_zero h
+    have := h'.1 (trunc N f)
+    contradiction
+  · intro h 
+    cases h with
+    | inl h =>
+      obtain ⟨p,hp⟩ := h
+      rw [hp]
+      apply coe_hasComp
+    | inr h =>
+      apply hasComp_of_constantCoeff_eq_zero (hg := h)
+
+
+
+
 
 
 /-

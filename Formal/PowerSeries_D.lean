@@ -6,7 +6,7 @@ Author: Richard M. Hill.
 import Mathlib.RingTheory.PowerSeries.Basic
 import Mathlib.RingTheory.Derivation.Basic
 import Formal.Truncation_lemmas
-import Formal.PowerSeries_comp
+import Formal.PowerSeries_hasComp
 import Formal.Derivation_lemma
 
 
@@ -179,47 +179,46 @@ theorem D_coe_comp (f : R[X]) (g : R⟦X⟧) : D R (f.eval₂ (C R) g)
   Derivation.polynomial_eval₂ (D R) f g
 
 
-
+open Finset Finset.Nat
 /-- The "chain rule" for formal power series in one variable:
   `D (f ∘ g) = (D f) ∘ g * D g`.
 If `g` has non-nilpotent constant term then the equation
 is trivially true, with both sides equal to zero.
 -/
 @[simp]
-theorem D_comp (f g : R⟦X⟧) : D R (f ∘ g) = (D R f ∘ g : R⟦X⟧) * D R g :=
+theorem D_comp (f g : R⟦X⟧) (hf : f.hasComp g) (hDf : (D R f).hasComp g) :
+  D R (f ∘ᶠ g) = D R f ∘ᶠ g * D R g :=
 by
-  by_cases IsNilpotent (constantCoeff R g)
-  · by_cases hh : h.choose > 0 
-    · ext n
-      rw [coeff_D, coeff_comp_eq h, ←coeff_D, D_coe_comp, coeff_mul,
-        coeff_mul, Finset.sum_congr rfl]
-      intro ⟨x,y⟩ hxy
-      have : x ≤ n :=
-        Finset.Nat.antidiagonal.fst_le hxy
-      rw [←trunc_D', coeff_comp_cts h.choose_spec]
-      dsimp
-      trans h.choose * (n+1)
-      · apply mul_le_mul (le_rfl)
-        apply succ_le_succ this
-        apply Nat.zero_le
-        apply Nat.zero_le
-      · apply Nat.le_pred_of_lt
-        apply Nat.mul_lt_mul_of_pos_left
-        · apply Nat.lt_succ_self
-        · exact hh
-    · simp only [gt_iff_lt, not_lt, nonpos_iff_eq_zero] at hh 
-      have := h.choose_spec
-      rw [hh, _root_.pow_zero] at this
-      suffices : (C R 1) * D R ( f ∘ g ) = (C R 1) * (D R f).comp g * D R g
-      · have that : C R 1 = 1 := rfl
-        rwa [that, one_mul, one_mul] at this
-      · rw [this, map_zero, zero_mul, zero_mul, zero_mul]
-  · rw [comp_eq_zero h, comp_eq_zero h, zero_mul, map_zero]
+  ext n
+  rw [coeff_D, coeff_comp hf, ←coeff_D, D_coe_comp, coeff_mul,
+    coeff_mul, sum_congr rfl]
+  intro ⟨x,y⟩ hxy
+  have : x ≤ n := antidiagonal.fst_le hxy
+  rw [←trunc_D', coeff_comp_stable']
+  dsimp
+  trans h.choose * (n+1)
+  · apply mul_le_mul (le_rfl)
+    apply succ_le_succ this
+    apply zero_le
+    apply zero_le
+  · apply le_pred_of_lt
+    apply mul_lt_mul_of_pos_left
+    · apply lt_succ_self
+    · exact hh
+  · simp only [gt_iff_lt, not_lt, nonpos_iff_eq_zero] at hh 
+    have := h.choose_spec
+    rw [hh, _root_.pow_zero] at this
+    suffices : (C R 1) * D R ( f ∘ g ) = (C R 1) * (D R f).comp g * D R g
+    · have that : C R 1 = 1 := rfl
+      rwa [that, one_mul, one_mul] at this
+    · rw [this, map_zero, zero_mul, zero_mul, zero_mul]
+
 
 
 
 end CommutativeSemiring
 
+--TODO : version of D_comp over a domain.
 
 
 

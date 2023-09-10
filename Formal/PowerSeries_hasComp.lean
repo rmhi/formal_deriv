@@ -312,6 +312,26 @@ by
   rw [comp, dif_pos h, coeff_mk]
 
 
+lemma coeff_comp_eq_finsum {f g : R⟦X⟧} (h : f.hasComp g) :
+  coeff R n (f ∘ᶠ g) = ∑ᶠ d : ℕ, coeff R d f * coeff R n (g ^ d)  :=
+by
+  rw [coeff_comp h, eval₂_trunc_eq_sum_range, map_sum]
+  simp_rw [coeff_C_mul]
+  symm
+  apply finsum_eq_sum_of_support_subset
+  intro d hd
+  rw [Function.mem_support, ne_eq] at hd
+  rw [coe_range, Set.mem_Iio]
+  by_contra h'
+  rw [not_lt] at h'
+  have := (h n).choose_spec
+  apply hd
+  apply this
+  exact h' 
+
+
+
+
 private lemma coeff_trunc_eval₂_of_zero {n N M : ℕ} {f g : R⟦X⟧}
   (hN : ∀ m, N ≤ m → coeff R m f * coeff R n (g^m) = 0) (hM : N ≤ M):
   coeff R n ((trunc M f).eval₂ (C R) g) = coeff R n ((trunc N f).eval₂ (C R) g) :=

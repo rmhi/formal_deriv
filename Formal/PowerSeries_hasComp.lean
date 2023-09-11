@@ -172,7 +172,7 @@ by
     apply mem_insert_of_mem ht
 
 
-private lemma uniform_stable_of_hasComp {f g : R⟦X⟧} (hfg : f.hasComp g) (n : ℕ) :
+lemma uniform_stable_of_hasComp {f g : R⟦X⟧} (hfg : f.hasComp g) (n : ℕ) :
   ∃ N: ℕ, ∀ d m : ℕ, d ≤ n → N ≤ m → (coeff R m f) * coeff R d (g ^ m) = 0 :=
 by
   induction n with
@@ -249,6 +249,9 @@ by
     apply mul_hasComp h ih
 
 
+
+
+
 theorem hasComp_iff [IsDomain R] {f g : R⟦X⟧} :
   f.hasComp g ↔ (∃ p : R[X], f = p) ∨ constantCoeff R g = 0 :=
 by
@@ -260,7 +263,7 @@ by
     obtain ⟨N,hN⟩ := h
     have : f = trunc N f
     · ext d
-      rw [coeff_coe, coeff_trunc]
+      rw [Polynomial.coeff_coe, coeff_trunc]
       split_ifs with h''
       · rfl
       · rw [not_lt] at h''
@@ -372,7 +375,18 @@ by
   rw [Polynomial.coeff_coe]
   apply coeff_eq_zero_of_natDegree_lt hm
 
- 
+
+theorem coe_comp_hasComp {f : R[X]} {g h : R⟦X⟧}
+  (hgh : g.hasComp h) :
+  (f ∘ᶠ g).hasComp h :=
+by
+   rw [coe_comp, eval₂_eq_sum]
+   apply sum_hasComp
+   intros
+   apply mul_hasComp
+   ·  apply C_hasComp
+   ·  apply pow_hasComp hgh
+
 theorem coeff_comp_of_constantCoeff_eq_zero {f g : R⟦X⟧} (h : constantCoeff R g = 0 ) :
    coeff R n (f ∘ᶠ g) = coeff R n ((trunc (n+1) f).eval₂ (C R) g) :=
 by

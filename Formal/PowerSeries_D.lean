@@ -3,6 +3,7 @@ Copyright (c) 2023 Richard M. Hill. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Author: Richard M. Hill.
 -/
+-- import Mathlib
 import Mathlib.RingTheory.PowerSeries.Basic
 import Mathlib.RingTheory.Derivation.Basic
 import Formal.Truncation_lemmas
@@ -174,9 +175,14 @@ by
 
 
 
-theorem D_coe_comp (f : R[X]) (g : R⟦X⟧) : D R (f.eval₂ (C R) g)
+theorem D_eval₂ (f : R[X]) (g : R⟦X⟧) : D R (f.eval₂ (C R) g)
   = (derivative f).eval₂ (C R) g * D R g :=
   Derivation.polynomial_eval₂ (D R) f g
+
+theorem D_coe_comp (f : R[X]) (g : R⟦X⟧) :
+  D R (f ∘ᶠ g) = (D R f) ∘ᶠ g * D R g :=
+by
+  rw [coe_comp, D_eval₂, D_coe, coe_comp]
 
 
 open Finset Finset.Nat
@@ -190,30 +196,32 @@ theorem D_comp (f g : R⟦X⟧) (hf : f.hasComp g) (hDf : (D R f).hasComp g) :
   D R (f ∘ᶠ g) = D R f ∘ᶠ g * D R g :=
 by
   ext n
-  rw [coeff_D, coeff_comp hf, ←coeff_D, D_coe_comp, coeff_mul,
-    coeff_mul, sum_congr rfl]
+  obtain ⟨N₁, hN₁⟩ := uniform_stable_of_hasComp hDf n
+  obtain ⟨N₂, hN₂⟩ := hf (n+1)
+  set N := max (N₁ + 1) N₂
+  rw [coeff_D, coeff_comp_of_stable hf (N := N),
+    ←coeff_D, D_coe_comp, coeff_mul, coeff_mul, sum_congr rfl]
   intro ⟨x,y⟩ hxy
-  have : x ≤ n := antidiagonal.fst_le hxy
-  rw [←trunc_D', coeff_comp_stable']
-  dsimp
-  trans h.choose * (n+1)
-  · apply mul_le_mul (le_rfl)
-    apply succ_le_succ this
-    apply zero_le
-    apply zero_le
-  · apply le_pred_of_lt
-    apply mul_lt_mul_of_pos_left
-    · apply lt_succ_self
-    · exact hh
-  · simp only [gt_iff_lt, not_lt, nonpos_iff_eq_zero] at hh 
-    have := h.choose_spec
-    rw [hh, _root_.pow_zero] at this
-    suffices : (C R 1) * D R ( f ∘ g ) = (C R 1) * (D R f).comp g * D R g
-    · have that : C R 1 = 1 := rfl
-      rwa [that, one_mul, one_mul] at this
-    · rw [this, map_zero, zero_mul, zero_mul, zero_mul]
+  dsimp; congr 1
+  rw [D_coe, ←trunc_D']
+  symm
+  apply coeff_comp_of_stable hDf
+  · intro m hm
+    rw [tsub_le_iff_right] at hm
+    apply hN₁
+    exact Finset.Nat.antidiagonal.fst_le hxy
+    have := le_of_max_le_left hm
+    rwa [←succ_le_succ_iff]
+  · intro m hm
+    apply hN₂
+    apply le_of_max_le_right hm
 
-
+@[simp]
+theorem D_comp' {f g : R⟦X⟧} (hg : constantCoeff R g = 0) :
+  D R (f ∘ᶠ g) = D R f ∘ᶠ g * D R g :=
+by
+  apply D_comp <;>
+  apply hasComp_of_constantCoeff_eq_zero (hg := hg)
 
 
 end CommutativeSemiring

@@ -3,7 +3,7 @@ Copyright (c) 2023 Richard M. Hill. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Author: Richard M. Hill.
 -/
--- import Mathlib
+import Mathlib
 import Mathlib.RingTheory.PowerSeries.Basic
 import Formal.Truncation_lemmas
 
@@ -103,7 +103,7 @@ by
   rw [this, mul_zero]
   exact lt.base d
 
-lemma hasComp_of_constantCoeff_eq_zero {f g : R⟦X⟧} {hg : constantCoeff R g = 0} :
+lemma hasComp_of_constantCoeff_eq_zero {f g : R⟦X⟧} (hg : constantCoeff R g = 0) :
   f.hasComp g :=
 by
   apply hasComp_of_isNilpotent_constantCoeff
@@ -137,6 +137,13 @@ lemma C_hasComp {r : R} {f : R⟦X⟧} :
 by
   rw [←Polynomial.coe_C]
   apply coe_hasComp
+
+lemma X_hasComp {f : R⟦X⟧} :
+  X.hasComp f :=
+by
+  rw [←Polynomial.coe_X]
+  apply coe_hasComp
+
 
 lemma add_hasComp {f₁ f₂ g : R⟦X⟧} (h₁ : f₁.hasComp g) (h₂ : f₂.hasComp g) :
   (f₁ + f₂).hasComp g :=

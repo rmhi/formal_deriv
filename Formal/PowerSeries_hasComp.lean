@@ -902,4 +902,36 @@ by
 
 
 
+
+theorem map_hasComp_map {R S : Type u} [CommSemiring R] [CommSemiring S]
+  {f g : R⟦X⟧} (h : f.hasComp g) (γ : R →+* S):
+  (map γ f).hasComp (map γ g) :=
+by
+  intro d
+  obtain ⟨N, hN⟩ := h d
+  use N
+  intro n hn
+  rw [coeff_map, ←map_pow, coeff_map, ←map_mul, hN n hn, map_zero]
+
+
+theorem map_comp' {R S : Type u} [CommSemiring R] [CommSemiring S]
+  {f g : R⟦X⟧} (h : f.hasComp g) (γ : R →+* S):
+  map γ (f ∘ᶠ g) = (map γ f) ∘ᶠ (map γ g) :=
+by
+  ext d
+  obtain ⟨N,hN⟩ := h d
+  rw [coeff_map, coeff_comp_of_stable h hN]
+  symm
+  rw [coeff_comp_of_stable (map_hasComp_map h γ) (N := N), ←coeff_map]
+  congr
+  rw [coe_comp, coe_comp, eval₂_trunc_eq_sum_range,
+    eval₂_trunc_eq_sum_range, map_sum]
+  apply sum_congr rfl
+  intros
+  rw [map_mul, map_pow, coeff_map, map_C]
+  intro n hn
+  rw [coeff_map, ←map_pow, coeff_map, ←map_mul, hN n hn, map_zero]
+
+
+
 end PowerSeries

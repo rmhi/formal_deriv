@@ -426,6 +426,54 @@ lemma coeff_comp_of_stable {n N : ℕ} {f g : R⟦X⟧} (h : f.hasComp g)
 by
   rw [coeff_comp_of_stable_original h hN, coe_comp]
 
+theorem hasComp_C {f g : R⟦X⟧} (h : f.hasComp g) :
+  f.hasComp (C R (constantCoeff R g)) :=
+by
+  intro d
+  cases d with
+  | zero =>
+    obtain ⟨N, hN⟩ := h 0
+    use N
+    simpa only [zero_eq, coeff_zero_eq_constantCoeff, map_pow, constantCoeff_C]
+      using hN
+  | succ n =>
+    use 0
+    intros
+    rw [←map_pow, coeff_C, if_neg (succ_ne_zero _), mul_zero]
+
+theorem constantCoeff_comp' {f g : R⟦X⟧} (h : f.hasComp g) :
+  C R (constantCoeff R (f ∘ᶠ g)) = f ∘ᶠ (C R (constantCoeff R g)) :=
+by
+  obtain ⟨N, hN⟩ := h 0
+  ext d
+  cases d with
+  | zero =>
+    rw [zero_eq, coeff_zero_eq_constantCoeff, constantCoeff_C,
+      ←coeff_zero_eq_constantCoeff, coeff_comp_of_stable h hN,
+      coeff_comp_of_stable (g := C R _) (N := N),
+      coeff_zero_eq_constantCoeff, coe_comp, coe_comp,
+      eval₂_trunc_eq_sum_range, eval₂_trunc_eq_sum_range,
+      map_sum, map_sum, map_sum]
+    apply sum_congr rfl
+    intros
+    rw [map_mul, map_mul, constantCoeff_C, map_pow, map_pow, constantCoeff_C, ←map_pow]
+    · rw [coeff_zero_eq_constantCoeff]
+      exact hasComp_C h
+    · intro n hn
+      specialize hN n hn
+      rw [coeff_zero_eq_constantCoeff, map_pow] at hN
+      rwa [coeff_zero_eq_constantCoeff, map_pow, constantCoeff_C]
+  | succ n =>
+      rw [coeff_C, if_neg (succ_ne_zero _), coeff_comp, eval₂_trunc_eq_sum_range,
+        map_sum]
+      symm
+      apply sum_eq_zero
+      intros
+      rw [←map_pow, ←map_mul, coeff_C, if_neg (succ_ne_zero _)]
+      all_goals
+        exact hasComp_C h
+
+
 lemma coeff_comp_stable' {n d : ℕ} {f g : R⟦X⟧} {h : f.hasComp g}
   (hn : (h d).choose ≤ n := by rfl) :
   coeff R d (f ∘ᶠ g) = coeff R d (trunc n f ∘ᶠ g) :=

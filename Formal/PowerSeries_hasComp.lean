@@ -3,7 +3,7 @@ Copyright (c) 2023 Richard M. Hill. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Author: Richard M. Hill.
 -/
-import Mathlib
+-- import Mathlib
 import Mathlib.RingTheory.PowerSeries.Basic
 import Formal.Truncation_lemmas
 
@@ -256,18 +256,24 @@ by
     apply mul_hasComp h ih
 
 
-
-
-
-theorem hasComp_iff [IsDomain R] {f g : R⟦X⟧} :
-  f.hasComp g ↔ (∃ p : R[X], f = p) ∨ constantCoeff R g = 0 :=
+/--
+If every zero-divisor of `R` is nilpotent then `f.hasComg g`
+if and only if `f` is a polynomial or `g` has nilpotent constant term.
+This criterion on `R` is satisfied for example by `ℤ⧸p^n` for a prime number `p`. 
+-/
+theorem hasComp_iff' (hR : ∀ x : R, IsNilpotent x ∨ x ∈ nonZeroDivisors R)
+  {f g : R⟦X⟧} :
+  f.hasComp g ↔ (∃ p : R[X], f = p) ∨ IsNilpotent (constantCoeff R g) :=
 by
   constructor
   · intro h
     by_contra h'
     push_neg at h'
-    specialize h 0
-    obtain ⟨N,hN⟩ := h
+    have :constantCoeff R g ∈ nonZeroDivisors R
+    · cases hR <| constantCoeff R g with
+      | inl => have := h'.2 ; contradiction
+      | inr => assumption
+    obtain ⟨N,hN⟩ := h 0
     have : f = trunc N f
     · ext d
       rw [Polynomial.coeff_coe, coeff_trunc]
@@ -275,26 +281,27 @@ by
       · rfl
       · rw [not_lt] at h''
         specialize hN d h''
-        rw [_root_.mul_eq_zero] at hN
-        cases hN with
-        | inl h => exact h
-        | inr h => 
-          exfalso
-          apply h'.2
-          rw [coeff_zero_eq_constantCoeff, map_pow] at h
-          apply pow_eq_zero h
-    have := h'.1 (trunc N f)
-    contradiction
+        rwa [coeff_zero_eq_constantCoeff, map_pow,
+          mul_right_mem_nonZeroDivisors_eq_zero_iff] at hN
+        apply pow_mem this
+    exact h'.1 (trunc N f) this
   · intro h 
     cases h with
     | inl h =>
       obtain ⟨p,hp⟩ := h
       rw [hp]
-      apply coe_hasComp
+      exact coe_hasComp
     | inr h =>
-      apply hasComp_of_constantCoeff_eq_zero (hg := h)
+      exact hasComp_of_isNilpotent_constantCoeff h
 
 
+theorem hasComp_iff [IsDomain R] {f g : R⟦X⟧} :
+  f.hasComp g ↔ (∃ p : R[X], f = p) ∨ constantCoeff R g = 0 :=
+by
+  rw [←isNilpotent_iff_eq_zero]
+  apply hasComp_iff'
+  simp_rw [isNilpotent_iff_eq_zero, mem_nonZeroDivisors_iff_ne_zero]
+  tauto
 
 
 

@@ -7,7 +7,7 @@ Author: Richard M. Hill.
 import Mathlib.RingTheory.PowerSeries.Basic
 import Mathlib.RingTheory.Derivation.Basic
 import Formal.Truncation_lemmas
-import Formal.PowerSeries_hasComp
+import Formal.PowerSeries_comp
 import Formal.Derivation_lemma
 
 

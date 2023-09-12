@@ -4,7 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Author: Richard M. Hill.
 -/
 -- import Mathlib
-import Formal.PowerSeries_hasComp
+import Formal.PowerSeries_comp
 
 /-
 In this file we prove, for a commutative ring `R`, that

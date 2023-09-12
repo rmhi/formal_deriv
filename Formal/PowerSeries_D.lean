@@ -226,13 +226,12 @@ by
 
 end CommutativeSemiring
 
---TODO : version of D_comp over a domain.
 
 
 
 /-In the next lemma, we use `smul_right_inj`, which requires not only `no_smul_divisors ℕ R`, but
 also cancellation of addition in `R`. For this reason, the next lemma is stated in the case that `R`
-is a `comm_ring`.-/
+is a `CommRing`.-/
 /-- If `f` and `g` have the same constant term and derivative, then they are equal.-/
 theorem eq_of_D_eq_of_const_eq
   {R : Type u} [CommRing R] [NoZeroSMulDivisors ℕ R]

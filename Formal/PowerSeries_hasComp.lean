@@ -389,6 +389,10 @@ by
   rw [Polynomial.coeff_coe]
   apply coeff_eq_zero_of_natDegree_lt hm
 
+theorem trunc_comp_eq_sum_range {f g : R⟦X⟧} {n : ℕ} :
+  (trunc n f) ∘ᶠ g = ∑ i in range n, C R (coeff R i f) * g ^ i :=
+by
+  rw [coe_comp, eval₂_trunc_eq_sum_range]
 
 theorem coe_comp_hasComp {f : R[X]} {g h : R⟦X⟧}
   (hgh : g.hasComp h) :
@@ -458,8 +462,8 @@ by
     rw [zero_eq, coeff_zero_eq_constantCoeff, constantCoeff_C,
       ←coeff_zero_eq_constantCoeff, coeff_comp_of_stable h hN,
       coeff_comp_of_stable (g := C R _) (N := N),
-      coeff_zero_eq_constantCoeff, coe_comp, coe_comp,
-      eval₂_trunc_eq_sum_range, eval₂_trunc_eq_sum_range,
+      coeff_zero_eq_constantCoeff, trunc_comp_eq_sum_range,
+      trunc_comp_eq_sum_range,
       map_sum, map_sum, map_sum]
     apply sum_congr rfl
     intros
@@ -781,7 +785,7 @@ by
     · exact hNh
     · apply pow_dvd_pow (h := hm)
     apply lt_succ_self
-  rw [coe_comp, eval₂_trunc_eq_sum_range, map_sum]
+  rw [trunc_comp_eq_sum_range, map_sum]
   simp_rw [coeff_C_mul]
   trans ∑ x in range Nh, (coeff R x (trunc Ng f ∘ᶠ g)) * (coeff R d (h ^ x))
   · apply sum_congr rfl
@@ -820,8 +824,7 @@ by
       all_goals { apply hasComp_of_isNilpotent_constantCoeff hh }
     · apply pow_dvd_pow (h := hm)
     apply lt_succ_self
-  · rw [coe_comp, eval₂_trunc_eq_sum_range]
-    rw [coe_comp, eval₂_trunc_eq_sum_range]
+  · rw [trunc_comp_eq_sum_range, trunc_comp_eq_sum_range]
     simp_rw [LinearMap.map_sum, sum_mul]
     rw [sum_comm]
     apply sum_congr rfl
@@ -841,7 +844,7 @@ by
       exact hNh
       apply pow_dvd_pow (h := hm)
       apply lt_succ_self
-    · rw [coe_comp, eval₂_trunc_eq_sum_range, map_sum]
+    · rw [trunc_comp_eq_sum_range, map_sum]
       apply sum_congr rfl
       intros
       rw [coeff_C_mul]
@@ -931,8 +934,7 @@ by
   symm
   rw [coeff_comp_of_stable (map_hasComp_map h γ) (N := N), ←coeff_map]
   congr
-  rw [coe_comp, coe_comp, eval₂_trunc_eq_sum_range,
-    eval₂_trunc_eq_sum_range, map_sum]
+  rw [trunc_comp_eq_sum_range, trunc_comp_eq_sum_range, map_sum]
   apply sum_congr rfl
   intros
   rw [map_mul, map_pow, coeff_map, map_C]

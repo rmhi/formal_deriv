@@ -10,21 +10,54 @@ import Formal.Truncation_lemmas
 /-!
 # Definitions
 
-In this file we define an operation `comp` (composition)
-on formal power series in one variable (over an arbitrary commutative semi-ring).
-The composition `f ∘ᶠ g` always makes sense if the constant term of `g` is
-a nilpotent element of `R`. In other cases, the composition is defined to be zero.
+Let `R` be a commutative semiring.
+Give two formal power series `f(X)` and `g(X)` with coefficients in `R`,
+their formal composition, when it exists, is the power series
 
-The composition can also be written `f ∘ᶠ g`, as long as no confusion arises with other kinds of composition.
+  `f ( g ( X ))= ∑ₙ fₙ * g^n`
 
-Under suitable assumptions, we prove that two power series are equal if their derivatives
-are equal and their constant terms are equal. This gives us a simple tool for proving
-power series identities. For example, one can easily prove the power series identity
-`exp (log (1 + X)) = 1 + X` by differentiating twice. Several examples of this kind of
-identity are contained in the accomanying file "Examples.lean".
+I.e the `d`-th coefficient of the composition is the sum
 
+  `∑ₙ fₙ * coeff R d (g ^ n)`.
+
+The formal composition exists when all of these sums have finite support.
+
+In this file we define a relation `PowerSeries.hasComp` on `R⟦X⟧`, where
+
+  `f.hasComp g` means that the formal composition of `f` and `g` exists.
+
+We also define the operation `PowerSeries.comp` on `R⟦X⟧`, where
+
+  `f.comp g` is the formal composition in the case `f.hasComp g`, or zero otherwise.
+
+The operation `f.comp g` can also be written `f ∘ᶠ g`.
+
+We also prove some of the algebraic properties of `f.hasComp g` and `f ∘ᶠ g`.
+
+  `PowerSeries.hasComp`     This is a relation on `R⟦X⟧`, stating that the composition
+                            `f ∘ᶠ g` makes sense. I.e. the sums defining the coefficients
+                            all have finite support.
+                            For fixed `g`, the set of `f` satisfying `f.hasComp g` is
+                            a subring of `R⟦X⟧`.
+  `PowerSeries.comp`        The composition  operation on `R⟦X⟧`.
+                            As a function of `f`, `f.comp g` is a fing homomorphism
+                            on the subring defined by `f.hasComp g`.
 
 ## Main results
+
+  `add_hasComp`
+  `mul_hasComp`
+  `coe_hasComp`
+  `hasComp_of_isNilpotent_constantCoeff`
+  `hasComp_iff` if `R` is a domain then `f.hasComp g` iff `f` is a polynomial or `g` has constant term `0`.
+  `hasComp_iff'` if all zero-divisors of `R` are nilpotent then then `f.hasComp g` iff `f` is a polynomial or `g` has milpotent constant term.
+
+Under suitable hypotheses on power series `f g h : R⟦X⟧`,
+we prove the following algebraic results:
+
+  `add_comp : (f + g) ∘ᶠ h = f ∘ᶠ h + g ∘ᶠ h`
+  `mul_comp : (f * g) ∘ᶠ h = f ∘ᶠ h * g ∘ᶠ h`
+  `comp_assoc : (f ∘ᶠ g) ∘ᶠ h = f ∘ᶠ (g ∘ᶠ h)`
 
 ## Notation
 
@@ -421,9 +454,6 @@ by
   apply this
   exact hm
 
-
-
-
 theorem constantCoeff_comp {f g : R⟦X⟧} (h : constantCoeff R g = 0) :
   constantCoeff R (f ∘ᶠ g) = constantCoeff R f :=
 by
@@ -485,11 +515,11 @@ by
         exact hasComp_C h
 
 
-lemma coeff_comp_stable' {n d : ℕ} {f g : R⟦X⟧} {h : f.hasComp g}
-  (hn : (h d).choose ≤ n := by rfl) :
-  coeff R d (f ∘ᶠ g) = coeff R d (trunc n f ∘ᶠ g) :=
-by
-  rw [coeff_comp_stable_original hn, coe_comp]
+-- lemma coeff_comp_stable' {n d : ℕ} {f g : R⟦X⟧} {h : f.hasComp g}
+--   (hn : (h d).choose ≤ n := by rfl) :
+--   coeff R d (f ∘ᶠ g) = coeff R d (trunc n f ∘ᶠ g) :=
+-- by
+--   rw [coeff_comp_stable_original hn, coe_comp]
 
 
 lemma coeff_comp_stable {f g : R⟦X⟧} (h : f.hasComp g) (d : ℕ) :
@@ -497,7 +527,7 @@ lemma coeff_comp_stable {f g : R⟦X⟧} (h : f.hasComp g) (d : ℕ) :
 by
   use (h d).choose
   intro n hn
-  apply coeff_comp_stable' hn
+  rw [coeff_comp_stable_original hn, coe_comp]
 
 lemma trunc_comp_stable {f g : R⟦X⟧} (hfg : hasComp f g) (d : ℕ) :
   ∃ N, ∀ n, N ≤ n → trunc d (f ∘ᶠ g) = trunc d (trunc n f ∘ᶠ g) :=

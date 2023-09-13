@@ -15,7 +15,7 @@ Some extra lemma about truncations of power series.
 namespace PowerSeries 
 
 open Nat hiding pow_succ pow_zero
-open Polynomial BigOperators Finset
+open Polynomial BigOperators Finset Finset.Nat
 
 variable {R : Type u} [CommSemiring R]
 scoped notation:9000 R "⟦X⟧" => PowerSeries R
@@ -33,7 +33,7 @@ by
 @[simp]
 theorem trunc_trunc (f : R⟦X⟧) {n : ℕ} : trunc n ↑(trunc n f) = trunc n f :=
 by
-  exact trunc_trunc_of_le f (by rfl)
+  exact trunc_trunc_of_le f
 
 @[simp]
 theorem trunc_trunc_mul (f g : R ⟦X⟧) (n : ℕ) :
@@ -43,8 +43,8 @@ by
   rw [coeff_trunc, coeff_trunc]
   split_ifs with h
   · rw [coeff_mul, coeff_mul, sum_congr rfl]
-    rintro ⟨a, b⟩ hab
-    have ha : a < n := lt_of_le_of_lt (Nat.antidiagonal.fst_le hab) h
+    intro _ hab
+    have ha := lt_of_le_of_lt (antidiagonal.fst_le hab) h
     rw [Polynomial.coeff_coe, coeff_trunc, if_pos ha]
   · rfl
 
@@ -99,8 +99,7 @@ by
 long truncation of the power series `f`.-/
 theorem coeff_stable {f : R⟦X⟧} {n m : ℕ} (h : n.succ ≤ m := by rfl) : coeff R n f = coeff R n (trunc m f) :=
 by
-  rw [Polynomial.coeff_coe, coeff_trunc, if_pos]
-  exact h
+  rwa [Polynomial.coeff_coe, coeff_trunc, if_pos]
 
 /-- The `n`-th coefficient of a`f*g` may be calculated 
 from the truncations of `f` and `g`.-/
@@ -114,15 +113,14 @@ by
 
 
 theorem coeff_mul_stable (f g : R⟦X⟧) {d n : ℕ} (h : d.succ ≤ n := by rfl) :
-  coeff R d (f * g) = coeff R d (trunc n f * trunc n g) :=
-by
-  exact coeff_mul_stable₂ f g h h
+  coeff R d (f * g) = coeff R d (trunc n f * trunc n g)
+  := coeff_mul_stable₂ f g h h
 
 
 theorem natDegree_trunc_lt (f : R⟦X⟧) (n : ℕ) : (trunc (n + 1) f).natDegree < n + 1 :=
 by
   rw [lt_succ_iff, natDegree_le_iff_coeff_eq_zero]
-  intro m hm
+  intros
   rw [coeff_trunc]
   split_ifs with h
   · rw [lt_succ, ←not_lt] at h
@@ -131,7 +129,8 @@ by
 
 
 @[simp]
-lemma trunc_zero' {f : R⟦X⟧} : trunc 0 f = 0 := rfl
+lemma trunc_zero' {f : R⟦X⟧} : trunc 0 f = 0
+  := rfl
 
 
 
@@ -140,16 +139,15 @@ theorem eval₂_trunc_eq_sum_range [Semiring S] {f : R⟦X⟧} {n : ℕ} {G : R 
 by
   cases n with
   | zero => 
-    rw [trunc_zero', range_zero,
-      sum_empty, eval₂_zero]
+    rw [trunc_zero', range_zero, sum_empty, eval₂_zero]
   | succ n =>
     have := natDegree_trunc_lt f n
     rw [eval₂_eq_sum_range' (hn := this)]
     apply sum_congr rfl
-    intro _ hi
-    rw [mem_range] at hi 
+    intro _ h
+    rw [mem_range] at h
     congr
-    rw [coeff_trunc, if_pos hi]
+    rw [coeff_trunc, if_pos h]
 
 
 @[simp]
@@ -161,7 +159,7 @@ by
   · rw [h₂, coeff_X_one]
   · rw [coeff_X_of_ne_one h₂]
   · rw [coeff_X_of_ne_one]
-    by_contra hd
+    intro hd
     apply h₁
     rw [hd]
     exact one_lt_succ_succ n

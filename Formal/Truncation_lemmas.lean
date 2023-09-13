@@ -14,7 +14,8 @@ Some extra lemma about truncations of power series.
 
 namespace PowerSeries 
 
-open Polynomial Nat BigOperators Finset
+open Nat hiding pow_succ pow_zero
+open Polynomial BigOperators Finset
 
 variable {R : Type u} [CommSemiring R]
 scoped notation:9000 R "⟦X⟧" => PowerSeries R
@@ -65,9 +66,9 @@ theorem trunc_trunc_pow (f : R⟦X⟧) (n a : ℕ) :
 by
   induction a with
   | zero =>
-    rw [_root_.pow_zero, _root_.pow_zero, Polynomial.coe_one]
+    rw [pow_zero, pow_zero, Polynomial.coe_one]
   | succ a ih =>
-    rw [_root_.pow_succ, _root_.pow_succ, Polynomial.coe_mul, Polynomial.coe_pow,
+    rw [pow_succ, pow_succ, Polynomial.coe_mul, Polynomial.coe_pow,
       trunc_trunc_mul, ←trunc_trunc_mul_trunc, ←Polynomial.coe_pow, ih,
       trunc_trunc_mul_trunc]
 
@@ -106,14 +107,10 @@ from the truncations of `f` and `g`.-/
 theorem coeff_mul_stable₂ (f g : R⟦X⟧) {n a b : ℕ} (ha : n < a) (hb : n < b) :
   coeff R n (f * g) = coeff R n (trunc a f * trunc b g) :=
 by
-  rw [coeff_mul, coeff_mul]
-  apply sum_congr rfl
-  intro ⟨x,y⟩ hxy
-  have hx : x ≤ n := Nat.antidiagonal.fst_le hxy
-  have hy : y ≤ n := Nat.antidiagonal.snd_le hxy
-  congr 1 <;> apply coeff_stable
-  · exact lt_of_le_of_lt hx ha
-  · exact lt_of_le_of_lt hy hb
+  symm
+  rw [←succ_le] at ha hb
+  rw [coeff_stable, ←trunc_trunc_mul_trunc, trunc_trunc_of_le f ha,
+    trunc_trunc_of_le g hb, trunc_trunc_mul_trunc, ←coeff_stable]
 
 
 theorem coeff_mul_stable (f g : R⟦X⟧) {d n : ℕ} (h : d.succ ≤ n := by rfl) :
@@ -133,6 +130,7 @@ by
   · rfl
 
 
+@[simp]
 lemma trunc_zero' {f : R⟦X⟧} : trunc 0 f = 0 := rfl
 
 
@@ -148,7 +146,7 @@ by
     have := natDegree_trunc_lt f n
     rw [eval₂_eq_sum_range' (hn := this)]
     apply sum_congr rfl
-    intro i hi
+    intro _ hi
     rw [mem_range] at hi 
     congr
     rw [coeff_trunc, if_pos hi]

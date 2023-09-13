@@ -104,11 +104,11 @@ by
   have h₀ : n + 1 < n + 1 + 1 := lt_succ_self (n + 1)
   have h₁ : n < n + 1 := lt_succ_self n
   have h₂ : n < n + 1 + 1 := lt_of_lt_of_le h₁ (le_of_lt h₀)
-  rw [coeff_D_fun, map_add, coeff_mul_cts f g h₀ h₀,
+  rw [coeff_D_fun, map_add, coeff_mul_stable,
     smul_eq_mul, smul_eq_mul,
-    coeff_mul_cts g f.D_fun h₂ h₁,
-    coeff_mul_cts f g.D_fun h₂ h₁, trunc_D_fun, trunc_D_fun,
-    ← map_add, ← D_fun_coe_mul_coe, coeff_D_fun]
+    coeff_mul_stable₂ g f.D_fun h₂ h₁,
+    coeff_mul_stable₂ f g.D_fun h₂ h₁, trunc_D_fun, trunc_D_fun,
+    ←map_add, ←D_fun_coe_mul_coe, coeff_D_fun]
 
 theorem D_fun_one : D_fun (1 : R⟦X⟧) = 0 :=
 by
@@ -182,7 +182,7 @@ theorem D_eval₂ (f : R[X]) (g : R⟦X⟧) : D R (f.eval₂ (C R) g)
 theorem D_coe_comp (f : R[X]) (g : R⟦X⟧) :
   D R (f ∘ᶠ g) = (D R f) ∘ᶠ g * D R g :=
 by
-  rw [coe_comp, D_eval₂, D_coe, coe_comp]
+  rw [coe_comp_eq_eval₂, D_eval₂, D_coe, coe_comp_eq_eval₂]
 
 
 open Finset Finset.Nat

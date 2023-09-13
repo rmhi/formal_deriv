@@ -3,12 +3,12 @@ Copyright (c) 2023 Richard M. Hill. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Author: Richard M. Hill.
 -/
--- import Mathlib
+import Mathlib
 import Mathlib.RingTheory.PowerSeries.Basic
 
 
 /-
-Some lemma about truncations of power series.
+Some extra lemma about truncations of power series.
 -/
 
 
@@ -103,7 +103,7 @@ by
 
 /-- The `n`-th coefficient of a`f*g` may be calculated 
 from the truncations of `f` and `g`.-/
-theorem coeff_mul_cts (f g : R⟦X⟧) {n a b : ℕ} (ha : n < a) (hb : n < b) :
+theorem coeff_mul_stable₂ (f g : R⟦X⟧) {n a b : ℕ} (ha : n < a) (hb : n < b) :
   coeff R n (f * g) = coeff R n (trunc a f * trunc b g) :=
 by
   rw [coeff_mul, coeff_mul]
@@ -116,12 +116,10 @@ by
   · exact lt_of_le_of_lt hy hb
 
 
-theorem coeff_mul_stable (d : ℕ) {f g : R⟦X⟧} :
-  ∀ n, d.succ ≤ n → coeff R d (f * g) = coeff R d (trunc n f * trunc n g) :=
+theorem coeff_mul_stable (f g : R⟦X⟧) {d n : ℕ} (h : d.succ ≤ n := by rfl) :
+  coeff R d (f * g) = coeff R d (trunc n f * trunc n g) :=
 by
-  intro _ hn
-  apply coeff_mul_cts <;>
-  exact hn
+  exact coeff_mul_stable₂ f g h h
 
 
 theorem natDegree_trunc_lt (f : R⟦X⟧) (n : ℕ) : (trunc (n + 1) f).natDegree < n + 1 :=

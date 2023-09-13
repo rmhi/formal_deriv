@@ -614,7 +614,7 @@ theorem mul_comp {f g h : R⟦X⟧} (hf : f.hasComp h) (hg : g.hasComp h) :
 by
   ext d
   obtain ⟨Nfg,hNfg⟩ := coeff_mul_comp_stable hf hg d
-  have hN_mul := coeff_mul_stable d (f := f ∘ᶠ h) (g := g ∘ᶠ h) d.succ (by rfl)
+  have hN_mul := coeff_mul_stable (f ∘ᶠ h) (g ∘ᶠ h) (d := d)
   rw [hN_mul]
   obtain ⟨Nf,hNf⟩ := trunc_comp_stable hf d.succ
   obtain ⟨Ng,hNg⟩ := trunc_comp_stable hg d.succ

@@ -3,7 +3,7 @@ Copyright (c) 2023 Richard M. Hill. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Author: Richard M. Hill.
 -/
--- import Mathlib
+import Mathlib
 import Formal.PowerSeries_comp
 
 /-
@@ -11,21 +11,20 @@ In this file we prove, for a commutative ring `R`, that
 a power series `f : R⟦X⟧` is a unit if and only if its constant term
 is a unit.
 
-## Main results
+## Main result
 
-- `PowerSeries.D_misUnit_iff` : a power series is a unit iff its
+- `PowerSeries.isUnit_iff` : a power series is a unit iff its
                                 constant term is a unit.
 -/
 
-
-open PowerSeries Nat BigOperators Polynomial
+open PowerSeries  BigOperators Polynomial
 
 
 variable {R : Type u} [CommRing R]
 
 namespace PowerSeries
 
-/--The power series `∑ (a * X)^n`.-/
+/--The power series `∑ (a * X) ^ n`.-/
 def geometricSeries (a : R) := mk (λ n ↦ a^n)
 
 theorem one_sub_smul_X_mul_geometric_series_eq_one (a : R) :
@@ -36,12 +35,12 @@ by
     one_mul, smul_eq_mul, coeff_one]
   cases n with
   | zero =>
-    rw [geometricSeries, coeff_mk, _root_.pow_zero,
+    rw [geometricSeries, coeff_mk, pow_zero,
       coeff_zero_eq_constantCoeff, map_mul, constantCoeff_X,
       zero_mul, mul_zero, sub_zero, if_pos rfl]
   | succ n =>
     rw [geometricSeries, coeff_mk, if_neg n.succ_ne_zero,
-      _root_.pow_succ, coeff_succ_X_mul, coeff_mk, sub_self]
+      pow_succ, coeff_succ_X_mul, coeff_mk, sub_self]
 
 theorem one_add_smul_X_mul_geometric_series_eq_one (a : R) :
   ((1 : R⟦X⟧) + a • X) * geometricSeries (-a) = 1 :=
@@ -89,7 +88,6 @@ by
     obtain ⟨g,hg⟩ := isUnit_C_unit_add_X a
     rw [eq_C_add_X_comp f]
     apply isUnit_of_mul_eq_one (b := g.inv.comp (f - C R (constantCoeff R f)))
-    simp at hg
     rw [← ha, ←hg, ←mul_comp]
     rw [Units.inv_eq_val_inv, Units.mul_inv, one_comp]
     all_goals

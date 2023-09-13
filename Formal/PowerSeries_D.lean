@@ -101,14 +101,12 @@ theorem D_fun_mul (f g : R⟦X⟧) :
   D_fun (f * g) = f • g.D_fun + g • f.D_fun :=
 by
   ext n
-  have h₀ : n + 1 < n + 1 + 1 := lt_succ_self (n + 1)
   have h₁ : n < n + 1 := lt_succ_self n
-  have h₂ : n < n + 1 + 1 := lt_of_lt_of_le h₁ (le_of_lt h₀)
+  have h₂ : n < n + 1 + 1 := Nat.lt_add_right _ _ _ h₁
   rw [coeff_D_fun, map_add, coeff_mul_stable,
-    smul_eq_mul, smul_eq_mul,
-    coeff_mul_stable₂ g f.D_fun h₂ h₁,
-    coeff_mul_stable₂ f g.D_fun h₂ h₁, trunc_D_fun, trunc_D_fun,
-    ←map_add, ←D_fun_coe_mul_coe, coeff_D_fun]
+    smul_eq_mul, smul_eq_mul, coeff_mul_stable₂ g f.D_fun h₂ h₁,
+    coeff_mul_stable₂ f g.D_fun h₂ h₁,
+    trunc_D_fun, trunc_D_fun, ←map_add, ←D_fun_coe_mul_coe, coeff_D_fun]
 
 theorem D_fun_one : D_fun (1 : R⟦X⟧) = 0 :=
 by
@@ -133,10 +131,11 @@ theorem D_mul : D R (f * g) = f * D R g + g * D R f :=
 by
   rw [Derivation.leibniz, smul_eq_mul, smul_eq_mul]
 
+@[simp]
 theorem D_one : D R 1 = 0 := D_fun_one
 
 @[simp]
-theorem D_C (r : R) : D R (C R r : R⟦X⟧) = 0 :=
+theorem D_C (r : R) : D R (C R r) = 0 :=
   D_fun_C r
 
 @[simp]
@@ -171,7 +170,7 @@ by
     simp only [zero_eq, ge_iff_le, tsub_eq_zero_of_le]
     rfl
   | succ n =>
-    rw [Nat.succ_sub_one, trunc_D]
+    rw [succ_sub_one, trunc_D]
 
 
 
@@ -187,9 +186,7 @@ by
 
 open Finset Finset.Nat
 /-- The "chain rule" for formal power series in one variable:
-  `D (f ∘ g) = (D f) ∘ g * D g`.
-If `g` has non-nilpotent constant term then the equation
-is trivially true, with both sides equal to zero.
+  `D (f ∘ᶠ g) = (D f) ∘ᶠ g * D g`.
 -/
 @[simp]
 theorem D_comp (f g : R⟦X⟧) (hf : f.hasComp g) (hDf : (D R f).hasComp g) :
@@ -201,18 +198,18 @@ by
   set N := max (N₁ + 1) N₂
   rw [coeff_D, coeff_comp_of_stable hf (N := N),
     ←coeff_D, D_coe_comp, coeff_mul, coeff_mul, sum_congr rfl]
-  intro ⟨x,y⟩ hxy
-  dsimp; congr 1
+  intro _ hxy
+  congr 1
   rw [D_coe, ←trunc_D']
   symm
   apply coeff_comp_of_stable hDf
-  · intro m hm
+  · intro _ hm
     rw [tsub_le_iff_right] at hm
     apply hN₁
-    exact Finset.Nat.antidiagonal.fst_le hxy
+    exact antidiagonal.fst_le hxy
     have := le_of_max_le_left hm
     rwa [←succ_le_succ_iff]
-  · intro m hm
+  · intro _ hm
     apply hN₂
     apply le_of_max_le_right hm
 
@@ -233,18 +230,18 @@ end CommutativeSemiring
 also cancellation of addition in `R`. For this reason, the next lemma is stated in the case that `R`
 is a `CommRing`.-/
 /-- If `f` and `g` have the same constant term and derivative, then they are equal.-/
-theorem eq_of_D_eq_of_const_eq
+theorem eq_of_D_eq_of_constantCoeff_eq
   {R : Type u} [CommRing R] [NoZeroSMulDivisors ℕ R]
-  (f g : PowerSeries R) :
-  D R f = D R g → constantCoeff R f = constantCoeff R g → f = g :=
+  {f g : PowerSeries R}
+  (hD : D R f = D R g) (hc : constantCoeff R f = constantCoeff R g) :
+  f = g :=
 by
-  intro h1 h2
   ext n
   cases n with
   | zero => 
-    rw [coeff_zero_eq_constantCoeff, h2]
+    rw [coeff_zero_eq_constantCoeff, hc]
   | succ n => 
-    have equ : coeff R n (D (R := R) f) = coeff R n (D (R := R) g) := by rw [h1]
+    have equ : coeff R n (D (R := R) f) = coeff R n (D (R := R) g) := by rw [hD]
     rwa [coeff_D, coeff_D, ←cast_succ, mul_comm, ←nsmul_eq_mul,
       mul_comm, ←nsmul_eq_mul, smul_right_inj] at equ
     exact succ_ne_zero n

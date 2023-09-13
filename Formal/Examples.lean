@@ -19,7 +19,7 @@ This is because
 
 
 open PowerSeries
-open Nat
+open Nat hiding pow_zero pow_succ
 
 #check D
 
@@ -42,10 +42,10 @@ by
     rw [map_add, geometricSeries]
     cases n with
     | zero =>
-      rw [coeff_zero_mul_X, add_zero, coeff_mk, _root_.pow_zero,
+      rw [coeff_zero_mul_X, add_zero, coeff_mk, pow_zero,
         coeff_zero_eq_constantCoeff, map_one]
     | succ n =>
-      rw [coeff_succ_mul_X, coeff_mk, coeff_mk, _root_.pow_succ,
+      rw [coeff_succ_mul_X, coeff_mk, coeff_mk, pow_succ,
         neg_one_mul, neg_add_self, coeff_one, if_neg (succ_ne_zero n)]
   · rw [map_add, map_one, constantCoeff_X, add_zero]
     exact one_ne_zero
@@ -77,7 +77,7 @@ theorem exp_neg {f : R⟦X⟧} (hf : constantCoeff R f = 0) :
 by
   have : constantCoeff R (-f) = 0 := by rwa [map_neg, neg_eq_zero]
   rw [PowerSeries.eq_inv_iff_mul_eq_one]
-  · apply eq_of_D_eq_of_const_eq
+  · apply eq_of_D_eq_of_constantCoeff_eq
     · rw [Derivation.leibniz, D_comp', D_comp', D_exp, Derivation.map_one_eq_zero,
         map_neg, mul_neg, smul_neg, smul_eq_mul, smul_eq_mul,
         ←mul_assoc, mul_comm (exp ∘ᶠ (-f) : R⟦X⟧), mul_assoc, add_neg_self]
@@ -100,7 +100,7 @@ by
     rw [constantCoeff_comp eq, constantCoeff_exp]
     exact one_ne_zero
     rw [map_add, hf, hg, add_zero]
-  apply eq_of_D_eq_of_const_eq
+  apply eq_of_D_eq_of_constantCoeff_eq
   · rw [D_mul, D_mul, D_comp', D_comp', D_comp', D_exp, D_one, map_neg, map_add]
     ring
     exact hf
@@ -132,7 +132,7 @@ by
   | succ n =>
     have : n + 1 ≠ 0 := succ_ne_zero n
     rw [coeff_succ_mul_X, coeff_D, coeff_mk, coeff_one, cast_add, cast_one, div_mul_cancel,
-      _root_.pow_succ, neg_one_mul, succ_eq_add_one, neg_add_self, if_neg this]
+      pow_succ, neg_one_mul, succ_eq_add_one, neg_add_self, if_neg this]
     rwa [←cast_one, ←cast_add, cast_ne_zero]
   · rw [←cast_one, ←cast_add, cast_ne_zero]
     exact succ_ne_zero n
@@ -165,7 +165,7 @@ by
 @[simp]
 theorem log_comp_exp : (logOneAdd ∘ᶠ (exp - 1) : R⟦X⟧) = X :=
 by
-  apply eq_of_D_eq_of_const_eq
+  apply eq_of_D_eq_of_constantCoeff_eq
   · rw [D_log_comp_exp, D_X]
   · rw [constantCoeff_comp const_exp_sub_one, constantCoeff_X, constantCoeff_logOneAdd]
 
@@ -177,7 +177,7 @@ by
     rw [map_sub, map_mul, map_add, map_add, hf, hg, map_one, add_zero, mul_one, sub_self]
   have : constantCoeff R (1 + X) ≠ 0
   · rw [map_add, map_one, constantCoeff_X, add_zero]; exact one_ne_zero
-  apply eq_of_D_eq_of_const_eq
+  apply eq_of_D_eq_of_constantCoeff_eq
   · rw [D_comp' eq, map_sub, D_mul, map_add, map_add, map_add, D_one, D_comp' hf,
       D_comp' hg, zero_add, sub_zero, zero_add, mul_add, D_logOneAdd, add_comm]
     congr 1
@@ -197,9 +197,9 @@ by
 @[simp]
 theorem exp_comp_log : exp ∘ᶠ logOneAdd = (1 + X : R⟦X⟧) :=
 by
-  apply eq_of_D_eq_of_const_eq
+  apply eq_of_D_eq_of_constantCoeff_eq
   · rw [D_comp' constantCoeff_logOneAdd, map_add, D_one, zero_add, D_exp]
-    apply eq_of_D_eq_of_const_eq
+    apply eq_of_D_eq_of_constantCoeff_eq
     · rw [D_mul, D_comp' constantCoeff_logOneAdd, D_exp, D_X, D_one, D_logOneAdd,
         D_inv', map_add, D_one, D_X, zero_add, mul_one, pow_two, mul_neg, ←mul_assoc, mul_comm, neg_add_self]
     · rw [D_X, map_one, D_logOneAdd, map_mul, constantCoeff_comp constantCoeff_logOneAdd,
@@ -216,7 +216,7 @@ by
 theorem constantCoeff_polylog_succ (n : ℕ) :
   constantCoeff R (polylog n.succ) = 0 :=
 by
-  rw [polylog, ← coeff_zero_eq_constantCoeff, coeff_mk, _root_.pow_succ,
+  rw [polylog, ← coeff_zero_eq_constantCoeff, coeff_mk, pow_succ,
     cast_zero, inv_zero, zero_mul]
 
 theorem D_polylog_one : D (polylog 1) = (1 - X)⁻¹ :=

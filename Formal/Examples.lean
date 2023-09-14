@@ -21,7 +21,6 @@ This is because
 open PowerSeries
 open Nat hiding pow_zero pow_succ
 
-#check D
 
 local notation "coeff"  => PowerSeries.coeff R
 local notation "D"      => D R
@@ -255,14 +254,14 @@ by
     exact succ_ne_zero n
 
 
-open Padic PadicInt
+-- open Padic PadicInt
 
-#check (2^5/5 : ℚ_[2])
+-- #check (2^5/5 : ℚ_[2])
 
-lemma two_pow_div_self_mem_ℤ₂ (n : ℕ) : ‖(2 ^ n / n : ℚ_[2])‖ ≤ 1 :=
-by
-  sorry
+-- lemma two_pow_div_self_mem_ℤ₂ (n : ℕ) : ‖(2 ^ n / n : ℚ_[2])‖ ≤ 1 :=
+-- by
+--   sorry
 
-noncomputable
-def f : ℤ_[2]⟦X⟧ := mk λ n ↦ ⟨(2^n / n), two_pow_div_self_mem_ℤ₂ n⟩
+-- noncomputable
+-- def f : ℤ_[2]⟦X⟧ := mk λ n ↦ ⟨(2^n / n), two_pow_div_self_mem_ℤ₂ n⟩
 

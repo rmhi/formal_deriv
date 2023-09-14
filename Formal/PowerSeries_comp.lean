@@ -32,6 +32,13 @@ In this file we define
   `PowerSeries.comp`    : a binary operation on `R⟦X⟧`, where `f.comp g` is the formal composition in the case
                           `f.hasComp g`, or zero otherwise.
 
+  `PowerSeries.hasCompRing g` : the subsemiring of `R⟦X⟧` whose elements
+                          are those `f` satisfying `f.hasComp g`.
+                      
+  `PowerSeries.compRinghom g` : the ring homomorphism `g.hasCompRing → R⟦X⟧`
+                          defined by `f ↦ f.comp g`.
+
+
 ## Notation
 
 The operation `f.comp g` can also be written `f ∘ᶠ g`.
@@ -891,7 +898,7 @@ end CommutativeSemiring
 
 
 
-/-NOTE: `instance : has_inv power_series R` is currently only defined
+/-NOTE: `instance : Inv R⟦X⟧` is currently only defined
 when `R` is a field, so the following two results can only be stated in in the case that
 `R` is a field.
 The second result `inv_comp` should eventually be extended to the case that

@@ -665,8 +665,8 @@ theorem sum_comp {A : Type} {S : Finset A} {f : A → R⟦X⟧} {g : R⟦X⟧}
   (∑ s in S, f s) ∘ᶠ g = ∑ s in S, (f s) ∘ᶠ g :=
 by
   /-
-  The obvious proof of this (using `map_sum` with `compRinghom`) will not work, because
-  there is currently no `AddCommGroup.coe_sum`.
+  The obvious proof (using `map_sum` and `AddSubgroup.val_finset_sum`)
+  turns out to be longer than the induction proof given here.
   -/
   induction S using Finset.induction
   intros

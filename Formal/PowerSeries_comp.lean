@@ -653,29 +653,26 @@ lemma comp_eq_compRinghom {f g : R⟦X⟧} (hfg : f.hasComp g) :
 by
   rfl
 
-
-/-
-TODO : rewrite this proof, using the ring homomorphism property.
--/
 theorem sum_comp {A : Type} {S : Finset A} {f : A → R⟦X⟧} {g : R⟦X⟧}
   (h : ∀ s : A, s ∈ S → (f s).hasComp g) :
   (∑ s in S, f s) ∘ᶠ g = ∑ s in S, (f s) ∘ᶠ g :=
 by
+  /-
+  The obvious proof of this (using `map_sum` with `compRinghom`) will not work, because
+  there is currently no `AddCommGroup.coe_sum`.
+  -/
   induction S using Finset.induction
   intros
   case empty =>
     rw [sum_empty, sum_empty, zero_comp]
-  case insert _ _ not_mem ih =>
+  case insert not_mem ih =>
     rw [sum_insert not_mem, sum_insert not_mem, add_comp, ih]
     · intro _ ht
-      apply h
-      apply mem_insert_of_mem ht
-    · apply h
-      apply mem_insert_self
+      apply h _ (mem_insert_of_mem ht)
+    · apply h _ (mem_insert_self _ _)
     · apply sum_hasComp
       intro _ ht
-      apply h
-      apply mem_insert_of_mem ht
+      apply h _ (mem_insert_of_mem ht)
 
 @[simp]
 theorem pow_comp {f g : R⟦X⟧} {n : ℕ} (h : f.hasComp g):
@@ -715,9 +712,7 @@ by
   · exact C_hasComp
   · apply pow_hasComp hgh
   · intros
-    apply mul_hasComp
-    exact C_hasComp
-    apply pow_hasComp hgh
+    exact mul_hasComp C_hasComp (pow_hasComp hgh)
 
 
 

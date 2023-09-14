@@ -1,2 +1,6 @@
+import Formal.Derivation_lemma
+import Formal.Truncation_lemmas
+import Formal.PowerSeries_comp
+import Formal.PowerSeries_D
 import Formal.PowerSeries_inv
 import Formal.Examples

@@ -1,3 +1,9 @@
+/-
+Copyright (c) 2023 Richard M. Hill. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Author: Richard M. Hill.
+-/
+
 import Mathlib
 import Formal.PowerSeries_D
 
@@ -28,7 +34,7 @@ local notation "D"      => D R
 
 namespace my_PowerSeries
 
-def exp             : R⟦X⟧ := mk λ n ↦ n.factorial⁻¹
+def exp             : R⟦X⟧ := mk λ n ↦ n !⁻¹
 def logOneAdd       : R⟦X⟧ := mk λ n ↦ -(-1) ^ n / n
 def geometricSeries : R⟦X⟧ := mk λ n ↦ (-1) ^ n 
 def polylog (d : ℕ) : R⟦X⟧ := mk λ n ↦ (n⁻¹: R)^d
@@ -208,7 +214,6 @@ by
       constantCoeff_X, add_zero]
 
 
---Polylogarithms
 
 
 
@@ -252,16 +257,4 @@ by
       mul_one]
     rw [cast_ne_zero]
     exact succ_ne_zero n
-
-
--- open Padic PadicInt
-
--- #check (2^5/5 : ℚ_[2])
-
--- lemma two_pow_div_self_mem_ℤ₂ (n : ℕ) : ‖(2 ^ n / n : ℚ_[2])‖ ≤ 1 :=
--- by
---   sorry
-
--- noncomputable
--- def f : ℤ_[2]⟦X⟧ := mk λ n ↦ ⟨(2^n / n), two_pow_div_self_mem_ℤ₂ n⟩
 

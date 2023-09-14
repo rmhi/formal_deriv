@@ -10,7 +10,7 @@ import Mathlib.RingTheory.Derivation.Basic
 variable {R : Type u} [CommSemiring R]
 
 
-open Polynomial Nat
+open Polynomial Nat Finset Derivation Algebra BigOperators
 
 
 /-- If `f` is a polynomial over `R`
@@ -32,19 +32,19 @@ theorem Derivation.polynomial_eval₂ [CommSemiring A] [Algebra R A]
   d (f.eval₂ (algebraMap R A) g)
   = (eval₂ (algebraMap R A) g (derivative (R:= R) f)) • d g :=
 by
-  rw [eval₂_eq_sum_range, map_sum, Finset.sum_range_succ', Derivation.leibniz,
-    Derivation.leibniz_pow, Derivation.map_algebraMap, zero_nsmul, smul_zero, smul_zero, zero_add,
-    add_zero]
+  rw [eval₂_eq_sum_range, map_sum, sum_range_succ', leibniz,
+    leibniz_pow, map_algebraMap, zero_nsmul, smul_zero, smul_zero,
+    zero_add, add_zero]
   by_cases f.natDegree = 0
-  · rw [h, Finset.sum_range_zero, derivative_of_natDegree_zero h, eval₂_zero,
+  · rw [h, sum_range_zero, derivative_of_natDegree_zero h, eval₂_zero,
       zero_smul]
-  · have : (derivative (R:=R) f).natDegree < f.natDegree := natDegree_derivative_lt h
-    rw [eval₂_eq_sum_range' (algebraMap R A) this, Finset.sum_smul]
-    apply Finset.sum_congr rfl
+  · have : (derivative f).natDegree < f.natDegree := natDegree_derivative_lt h
+    rw [eval₂_eq_sum_range' (algebraMap R A) this, sum_smul]
+    apply sum_congr rfl
     intros
-    rw [Derivation.leibniz, Derivation.leibniz_pow, Derivation.map_algebraMap, smul_zero, add_zero,
+    rw [leibniz, leibniz_pow, map_algebraMap, smul_zero, add_zero,
       add_tsub_cancel_right, coeff_derivative, map_mul, IsScalarTower.algebraMap_smul,
-      Algebra.algebraMap_eq_smul_one, Algebra.algebraMap_eq_smul_one, Algebra.smul_mul_assoc,
-      Algebra.mul_smul_comm, one_mul, Algebra.smul_mul_assoc, Algebra.smul_mul_assoc, one_mul,
+      algebraMap_eq_smul_one, algebraMap_eq_smul_one, smul_mul_assoc,
+      mul_smul_comm, one_mul, smul_mul_assoc, smul_mul_assoc, one_mul,
       smul_assoc, smul_assoc, ←cast_succ, ← nsmul_eq_smul_cast]
 

@@ -779,6 +779,48 @@ by
 
 
 
+private lemma uniform_bound_of_isNilpotent {g : R⟦X⟧} (hg : IsNilpotent (constantCoeff g)) (d : ℕ) :
+  ∃ N, ∀ f : R⟦X⟧, coeff R d (f ∘ᶠ g) = ∑ n in range N, coeff R n f * coeff R d (g ^ n) :=
+by
+  obtain ⟨N, hN⟩ := X_pow_dvd_pow_of_isNilpotent_constantCoeff (g := g) d.succ hg
+  use N
+  intro f
+  have hfg : f.hasComp g := hasComp_of_isNilpotent_constantCoeff hg
+  rw [coeff_comp_eq_finsum hfg]
+  apply finsum_eq_sum_of_support_subset
+  intro x
+  contrapose
+  intro hx
+  rw [coe_range, Set.mem_Iio, not_lt] at hx
+  rw [Function.mem_support, not_not]
+  apply mul_eq_zero_of_right
+  have : X^d.succ ∣ g^x 
+  · trans g^N
+    exact hN
+    apply pow_dvd_pow (h := hx)
+  rw [X_pow_dvd_iff] at this
+  exact this d (lt_succ_self d)
+
+
+
+private lemma Finite_support_of_hasComp {f g : R⟦X⟧} (h : f.hasComp g) (d : ℕ) :
+  Set.Finite <| Function.support <| λ n ↦ coeff R n f * coeff R d (g ^ n) :=
+by
+  obtain ⟨N,hN⟩ := h d
+  apply Set.Finite.subset (s := range N)
+  · exact finite_toSet (range N)
+  intro x
+  contrapose
+  rw [coe_range, Set.mem_Iio, not_lt, Function.mem_support, ne_eq, not_not]
+  apply hN
+
+
+
+lemma hasComp_comp {f g h : R⟦X⟧} (hfg : f.hasComp g) (hh : IsNilpotent (constantCoeff R h)) :
+  f.hasComp (g ∘ᶠ h) :=
+by
+  sorry
+
 /-
 Although I don't have a counterexample, it seems unlikely that composition
 of formal power series is associative, even in the case when none of the terms
@@ -788,91 +830,109 @@ However, composition is associative in the most familiar cases, where constant t
 are nilpotent.
 -/
 
-
-theorem comp_assoc {f g h : R⟦X⟧}
-  (hg : IsNilpotent (constantCoeff R g)) (hh : IsNilpotent (constantCoeff R h)):
+--TODO : remove `hg` hypothesis an improve proof using `finsum`.
+theorem comp_assoc {f g h : R⟦X⟧} (hfg : f.hasComp g) (hh : IsNilpotent (constantCoeff R h)):
   (f ∘ᶠ g) ∘ᶠ h = f ∘ᶠ (g ∘ᶠ h) :=
 by
-  have hfg : f.hasComp g := hasComp_of_isNilpotent_constantCoeff hg 
   have hgh : g.hasComp h := hasComp_of_isNilpotent_constantCoeff hh
-  have hgh_nil := IsNilpotent_constantCoeff_comp hg hh 
-  have hfgh₁ : f.hasComp (g ∘ᶠ h) := hasComp_of_isNilpotent_constantCoeff hgh_nil
+  have hfgh₁ : f.hasComp (g ∘ᶠ h) := hasComp_comp hfg hh
   have hfgh₂ : (f ∘ᶠ g).hasComp h := hasComp_of_isNilpotent_constantCoeff hh
   ext d
-  obtain ⟨Nh, hNh⟩ := X_pow_dvd_pow_of_isNilpotent_constantCoeff d.succ hh
-  obtain ⟨Ng, hNg⟩ := X_pow_dvd_pow_of_isNilpotent_constantCoeff Nh.succ hg
-  trans coeff R d (trunc Nh (f ∘ᶠ g) ∘ᶠ h)
-  · apply coeff_comp_of_stable hfgh₂
-    intro m hm
-    apply mul_eq_zero_of_right
-    apply (X_pow_dvd_iff (n := d.succ)).1
-    trans h ^ Nh
-    · exact hNh
-    · apply pow_dvd_pow (h := hm)
-    apply lt_succ_self
-  rw [trunc_comp_eq_sum_range, map_sum]
-  simp_rw [coeff_C_mul]
-  trans ∑ x in range Nh, (coeff R x (trunc Ng f ∘ᶠ g)) * (coeff R d (h ^ x))
-  · apply sum_congr rfl
-    intro x hx
-    rw [mem_range] at hx
-    congr 1
-    apply coeff_comp_of_stable hfg
-    intro m hm
-    apply mul_eq_zero_of_right
-    apply (X_pow_dvd_iff (n := x.succ)).1
-    trans X ^ Nh.succ
-    · apply pow_dvd_pow
-      rw [succ_le_succ_iff]
-      apply le_of_lt hx
-    · trans g ^ Ng
-      exact hNg
-      apply pow_dvd_pow (h := hm)
-    apply lt_succ_self
-  symm
-  trans coeff R d (trunc Ng f ∘ᶠ (g ∘ᶠ h))
-  · apply coeff_comp_of_stable hfgh₁
-    intro m hm
-    apply mul_eq_zero_of_right
-    apply (X_pow_dvd_iff (n := d.succ)).1
-    trans (g ∘ᶠ h) ^ Ng
-    · rw [←pow_comp]
-      obtain ⟨c , hc⟩ := hNg
-      rw [hc, mul_comp]
-      apply dvd_mul_of_dvd_left
-      rw [pow_comp, X_comp]
-      trans h ^ Nh
-      exact hNh
-      apply pow_dvd_pow
-      apply le_of_lt
-      apply lt_succ_self
-      all_goals { apply hasComp_of_isNilpotent_constantCoeff hh }
-    · apply pow_dvd_pow (h := hm)
-    apply lt_succ_self
-  · rw [trunc_comp_eq_sum_range, trunc_comp_eq_sum_range]
-    simp_rw [LinearMap.map_sum, sum_mul]
-    rw [sum_comm]
-    apply sum_congr rfl
-    intro a _
-    simp_rw [coeff_C_mul]
-    simp_rw [mul_assoc, ←mul_sum]
-    congr 1
-    rw [←pow_comp hgh]
-    trans coeff R d (trunc Nh (g ^ a) ∘ᶠ h)
-    · apply coeff_comp_of_stable
-      apply pow_hasComp
-      exact hgh
-      intro m hm
-      apply mul_eq_zero_of_right
-      apply (X_pow_dvd_iff (n := d.succ)).1
-      trans h^Nh
-      exact hNh
-      apply pow_dvd_pow (h := hm)
-      apply lt_succ_self
-    · rw [trunc_comp_eq_sum_range, map_sum]
-      apply sum_congr rfl
-      intros
-      rw [coeff_C_mul]
+  obtain ⟨Nh, hNh⟩ := uniform_bound_of_isNilpotent (g := h) hh d
+  rw [hNh, coeff_comp_eq_finsum]
+  conv =>
+    right; right; intro; rw [←pow_comp hgh, hNh, mul_sum]
+  rw [finsum_sum_comm]
+  apply sum_congr rfl
+  intros
+  rw [coeff_comp_eq_finsum hfg, finsum_mul]
+  apply finsum_congr
+  intros
+  apply mul_assoc 
+  · apply Finite_support_of_hasComp hfg
+  · intros d _
+    apply Set.Finite.subset (hs := Finite_support_of_hasComp hfg d)
+    intro
+    contrapose
+    rw [Function.mem_support, Function.mem_support, not_not, not_not, ←mul_assoc]
+    intro hx
+    apply mul_eq_zero_of_left hx
+  assumption
+    
+  
+
+  -- trans coeff R d (trunc Nh (f ∘ᶠ g) ∘ᶠ h)
+  -- · apply coeff_comp_of_stable hfgh₂
+  --   intro m hm
+  --   apply mul_eq_zero_of_right
+  --   apply (X_pow_dvd_iff (n := d.succ)).1
+  --   trans h ^ Nh
+  --   · exact hNh
+  --   · apply pow_dvd_pow (h := hm)
+  --   apply lt_succ_self
+  -- rw [trunc_comp_eq_sum_range, map_sum]
+  -- simp_rw [coeff_C_mul]
+  -- trans ∑ x in range Nh, (coeff R x (trunc Ng f ∘ᶠ g)) * (coeff R d (h ^ x))
+  -- · apply sum_congr rfl
+  --   intro x hx
+  --   rw [mem_range] at hx
+  --   congr 1
+  --   apply coeff_comp_of_stable hfg
+  --   intro m hm
+  --   apply mul_eq_zero_of_right
+  --   apply (X_pow_dvd_iff (n := x.succ)).1
+  --   trans X ^ Nh.succ
+  --   · apply pow_dvd_pow
+  --     rw [succ_le_succ_iff]
+  --     apply le_of_lt hx
+  --   · trans g ^ Ng
+  --     exact hNg
+  --     apply pow_dvd_pow (h := hm)
+  --   apply lt_succ_self
+  -- symm
+  -- trans coeff R d (trunc Ng f ∘ᶠ (g ∘ᶠ h))
+  -- · apply coeff_comp_of_stable hfgh₁
+  --   intro m hm
+  --   apply mul_eq_zero_of_right
+  --   apply (X_pow_dvd_iff (n := d.succ)).1
+  --   trans (g ∘ᶠ h) ^ Ng
+  --   · rw [←pow_comp]
+  --     obtain ⟨c , hc⟩ := hNg
+  --     rw [hc, mul_comp]
+  --     apply dvd_mul_of_dvd_left
+  --     rw [pow_comp, X_comp]
+  --     trans h ^ Nh
+  --     exact hNh
+  --     apply pow_dvd_pow
+  --     apply le_of_lt
+  --     apply lt_succ_self
+  --     all_goals { apply hasComp_of_isNilpotent_constantCoeff hh }
+  --   · apply pow_dvd_pow (h := hm)
+  --   apply lt_succ_self
+  -- · rw [trunc_comp_eq_sum_range, trunc_comp_eq_sum_range]
+  --   simp_rw [LinearMap.map_sum, sum_mul]
+  --   rw [sum_comm]
+  --   apply sum_congr rfl
+  --   intro a _
+  --   simp_rw [coeff_C_mul]
+  --   simp_rw [mul_assoc, ←mul_sum]
+  --   congr 1
+  --   rw [←pow_comp hgh]
+  --   trans coeff R d (trunc Nh (g ^ a) ∘ᶠ h)
+  --   · apply coeff_comp_of_stable
+  --     apply pow_hasComp
+  --     exact hgh
+  --     intro m hm
+  --     apply mul_eq_zero_of_right
+  --     apply (X_pow_dvd_iff (n := d.succ)).1
+  --     trans h^Nh
+  --     exact hNh
+  --     apply pow_dvd_pow (h := hm)
+  --     apply lt_succ_self
+  --   · rw [trunc_comp_eq_sum_range, map_sum]
+  --     apply sum_congr rfl
+  --     intros
+  --     rw [coeff_C_mul]
 
 
 lemma rescale_eq_comp_mul_X (f : R⟦X⟧) (r : R) :

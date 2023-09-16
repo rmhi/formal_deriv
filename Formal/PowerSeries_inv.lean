@@ -17,7 +17,7 @@ is a unit.
                                 constant term is a unit.
 -/
 
-open PowerSeries  BigOperators Polynomial
+open PowerSeries BigOperators Polynomial
 
 
 variable {R : Type u} [CommRing R]
@@ -27,7 +27,7 @@ namespace PowerSeries
 /--The power series `∑ (a * X) ^ n`.-/
 def geometricSeries (a : R) := mk (λ n ↦ a^n)
 
-theorem one_sub_smul_X_mul_geometric_series_eq_one (a : R) :
+theorem one_sub_smul_X_mul_geometric_series_eq_one :
   ((1: R⟦X⟧) - a • X) * geometricSeries a = 1 :=
 by
   ext n
@@ -42,10 +42,10 @@ by
     rw [geometricSeries, coeff_mk, if_neg n.succ_ne_zero,
       pow_succ, coeff_succ_X_mul, coeff_mk, sub_self]
 
-theorem one_add_smul_X_mul_geometric_series_eq_one (a : R) :
+theorem one_add_smul_X_mul_geometric_series_eq_one :
   ((1 : R⟦X⟧) + a • X) * geometricSeries (-a) = 1 :=
 by
-  have := one_sub_smul_X_mul_geometric_series_eq_one (-a)
+  have := one_sub_smul_X_mul_geometric_series_eq_one (a := -a)
   rwa [neg_smul, sub_neg_eq_add] at this
 
 theorem C_unit_add_X_mul_inv_smul_geometricSeries_eq_one (a : Rˣ) :
@@ -62,20 +62,20 @@ by
   apply isUnit_of_mul_eq_one
   apply C_unit_add_X_mul_inv_smul_geometricSeries_eq_one
 
-lemma constantCoeff_sub_C_self (f : R⟦X⟧) :
+private lemma constantCoeff_sub_C_self :
   constantCoeff R (f - C R (constantCoeff R f)) = 0 :=
 by
   rw [map_sub, constantCoeff_C, sub_self]
 
-lemma eq_C_add_X_comp (f : R⟦X⟧) :
+private lemma eq_C_add_X_comp (f : R⟦X⟧) :
   f = (C R (constantCoeff R f) + X) ∘ᶠ (f - C R (constantCoeff R f)) :=
 by
   rw [add_comp, X_comp, C_comp, add_sub_cancel'_right]
   all_goals
-    apply hasComp_of_constantCoeff_eq_zero
-    apply constantCoeff_sub_C_self
+    exact hasComp_of_constantCoeff_eq_zero constantCoeff_sub_C_self
 
-theorem isUnit_iff (f : R⟦X⟧) :
+@[simp]
+theorem isUnit_iff :
   (IsUnit f) ↔ IsUnit (constantCoeff R f) :=
 by
   constructor
@@ -92,8 +92,7 @@ by
     rw [Units.inv_eq_val_inv, Units.mul_inv, one_comp]
     all_goals
       rw [ha]
-      apply hasComp_of_constantCoeff_eq_zero
-      apply constantCoeff_sub_C_self
+      exact hasComp_of_constantCoeff_eq_zero constantCoeff_sub_C_self
 
 end PowerSeries
 

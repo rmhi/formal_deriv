@@ -20,7 +20,7 @@ open Polynomial BigOperators Finset Finset.Nat
 variable {R : Type u} [CommSemiring R]
 scoped notation:9000 R "⟦X⟧" => PowerSeries R
 
-theorem trunc_trunc_of_le (f : R⟦X⟧) {n m : ℕ} (hnm : n ≤ m := by rfl) :
+theorem trunc_trunc_of_le (f : R⟦X⟧) (hnm : n ≤ m := by rfl) :
   trunc n ↑(trunc m f) = trunc n f :=
 by
   ext d
@@ -31,12 +31,12 @@ by
   · rfl
 
 @[simp]
-theorem trunc_trunc (f : R⟦X⟧) {n : ℕ} : trunc n ↑(trunc n f) = trunc n f :=
+theorem trunc_trunc (f : R⟦X⟧) : trunc n ↑(trunc n f) = trunc n f :=
 by
   exact trunc_trunc_of_le f
 
 @[simp]
-theorem trunc_trunc_mul (f g : R ⟦X⟧) (n : ℕ) :
+theorem trunc_trunc_mul (f g : R ⟦X⟧) :
   trunc n ( (trunc n f) * g : R⟦X⟧ ) = trunc n ( f * g ) :=
 by
   ext m
@@ -49,13 +49,13 @@ by
   · rfl
 
 @[simp]
-theorem trunc_mul_trunc (f g : R ⟦X⟧) (n : ℕ) :
+theorem trunc_mul_trunc (f g : R ⟦X⟧) :
   trunc n ( f * (trunc n g) : R⟦X⟧ ) = trunc n ( f * g ) :=
 by
   rw [mul_comm, trunc_trunc_mul, mul_comm]
 
 @[simp]
-theorem trunc_trunc_mul_trunc (f g : R⟦X⟧) (n : ℕ) :
+theorem trunc_trunc_mul_trunc (f g : R⟦X⟧) :
   trunc n (trunc n f * trunc n g : R⟦X⟧) = trunc n (f * g) :=
 by
   rw [trunc_trunc_mul, trunc_mul_trunc]
@@ -72,7 +72,7 @@ by
       trunc_trunc_mul, ←trunc_trunc_mul_trunc, ←Polynomial.coe_pow, ih,
       trunc_trunc_mul_trunc]
 
-theorem trunc_coe_eq_self {f : R[X]} {n : ℕ} (hn : f.natDegree < n) :
+theorem trunc_coe_eq_self (hn : natDegree f < n) :
   trunc n (f : R⟦X⟧) = f :=
 by
   have this : support f ⊆ Ico 0 n
@@ -97,13 +97,14 @@ by
 
 /-- The function `coeff n : R⟦X⟧ → R` is continuous. I.e. `coeff n f` depends only on a sufficiently
 long truncation of the power series `f`.-/
-theorem coeff_stable {f : R⟦X⟧} {n m : ℕ} (h : n.succ ≤ m := by rfl) : coeff R n f = coeff R n (trunc m f) :=
+theorem coeff_stable (h : n.succ ≤ m := by rfl) :
+  coeff R n f = coeff R n (trunc m f) :=
 by
   rwa [Polynomial.coeff_coe, coeff_trunc, if_pos]
 
 /-- The `n`-th coefficient of a`f*g` may be calculated 
 from the truncations of `f` and `g`.-/
-theorem coeff_mul_stable₂ (f g : R⟦X⟧) {n a b : ℕ} (ha : n < a) (hb : n < b) :
+theorem coeff_mul_stable₂ (f g) (ha : n < a) (hb : n < b) :
   coeff R n (f * g) = coeff R n (trunc a f * trunc b g) :=
 by
   symm
@@ -112,12 +113,12 @@ by
     trunc_trunc_of_le g hb, trunc_trunc_mul_trunc, ←coeff_stable]
 
 
-theorem coeff_mul_stable (f g : R⟦X⟧) {d n : ℕ} (h : d.succ ≤ n := by rfl) :
+theorem coeff_mul_stable (f g) (h : d.succ ≤ n := by rfl) :
   coeff R d (f * g) = coeff R d (trunc n f * trunc n g)
   := coeff_mul_stable₂ f g h h
 
 
-theorem natDegree_trunc_lt (f : R⟦X⟧) (n : ℕ) : (trunc (n + 1) f).natDegree < n + 1 :=
+theorem natDegree_trunc_lt (f : R⟦X⟧) (n) : (trunc (n + 1) f).natDegree < n + 1 :=
 by
   rw [lt_succ_iff, natDegree_le_iff_coeff_eq_zero]
   intros
@@ -134,7 +135,7 @@ lemma trunc_zero' {f : R⟦X⟧} : trunc 0 f = 0
 
 
 
-theorem eval₂_trunc_eq_sum_range [Semiring S] {f : R⟦X⟧} {n : ℕ} {G : R →+* S} {s : S} :
+theorem eval₂_trunc_eq_sum_range [Semiring S] {G : R →+* S} :
   (trunc n f).eval₂ G s = ∑ i in range n, G (coeff R i f) * s ^ i :=
 by
   cases n with
@@ -151,7 +152,7 @@ by
 
 
 @[simp]
-theorem trunc_X {n : ℕ} : trunc (n + 2) X = (Polynomial.X : R[X]) :=
+theorem trunc_X : trunc (n + 2) X = (Polynomial.X : R[X]) :=
 by
   ext d
   rw [coeff_trunc, coeff_X]
